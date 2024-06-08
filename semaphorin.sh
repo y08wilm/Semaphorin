@@ -3664,7 +3664,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     read -p "[*] Press Enter once your device has fully booted into the SSH ramdisk. " r1
                     echo "[*] Waiting 6 seconds before continuing.."
                     sleep 6
-                    S
+                    sudo killall -STOP -c usbd
                     read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
                     if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
                         read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
