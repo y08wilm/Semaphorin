@@ -126,12 +126,6 @@ Linux and Windows support is not planned either, do not ask about this either.
    ### Meridian is absent (on iPads)
    iPads have uicache issues with most jailbreaking tools. To open Meridian, enter `meridian://` in Safari's address bar and press Enter. Until further notice, this does not work, due to Safari not working on that version of iOS. This may be fixed at a later date. Sorry for the inconvenience.
 
-   ### Chimera is absent (on iPads)
-   iPads have uicache issues with most jailbreaking tools. To open Chimera, enter `chimera://` in Safari's address bar and press Enter.
-
-   ### Electra is absent (on iPads)
-   iPads have uicache issues with most jailbreaking tools. To open Electra, enter `electra://` in Safari's address bar and press Enter.
-
    ### Pangu is absent (on iPads)
    iPads have uicache issues with most jailbreaking tools. To open Pangu, enter `nvwastone://` in Safari's address bar and press Enter.
 
