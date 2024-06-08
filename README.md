@@ -10,7 +10,11 @@
 
 # IF YOUR DEVICE SUPPORTS [LEGACY-IOS-KIT](https://github.com/LukeZGD/Legacy-iOS-Kit), YOU SHOULD REALLY USE THAT OVER THIS.
 
-# SEMAPHORIN IS NOW DISCONTINUED, PLEASE ASK [Mineek](https://github.com/mineek) FOR THE BEST ALTERNATIVE.
+# SEMAPHORIN IS NOW DISCONTINUED, PLEASE ASK [Mineek](https://github.com/mineek) FOR WHAT THEY SUGGEST YOU TO USE.
+
+# IF YOU ARE IN THE SEMAPHORIN DISCORD SERVER, PLEASE LEAVE. IT IS NON OFFICIAL AS OF NOW.
+
+# YOU CAN USE [https://github.com/LukeZGD/Semaphorin](https://github.com/LukeZGD/Semaphorin) FOR FUTURE UPDATES.
 
 # Chart of compatibility
 
@@ -18,7 +22,7 @@
 |-------------|-----------|-------------|-----------|---------|----------|------------|------------|
 | 7.0.6       | &#9745;   | &#9745;     | &#9745;   | &#9745; | &#9745;  | &#9745;    | &#9745;    | 
 | 7.1.2       | &#9745;   | &#9745;     | &#9745;   | &#9745; | &#9745;  | &#9745;    | &#9745;    |
-| 8.2         | &#9745;   | &#9745;     | &#9745;   | &#9745; | &#9744;  | &#9745;    | &#9745;    |
+| 8.4.1       | &#9745;   | &#9745;     | &#9745;   | &#9745; | &#9744;  | &#9745;    | &#9745;    |
 | 9.3         | &#9745;   | &#9745;     | &#9745;   | &#9745; | &#9745;  | &#9744;    | &#9744;    |
 | 10.3.3      | &#9745;   | &#9745;     | &#9745;   | &#9745; | &#9745;  | &#9744;    | &#9744;    |
 | 11.3        | &#9745;   | &#9745;     | &#9745;   | &#9745; | &#9745;  | &#9744;    | &#9744;    |
