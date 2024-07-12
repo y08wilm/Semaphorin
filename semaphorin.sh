@@ -70,7 +70,7 @@ if [[ $os =~ Darwin ]]; then
         read -p "[*] You can press the enter key on your keyboard to skip this warning  " r1
         if [[ ! -e "$bin"/.compiled ]]; then
             rm -rf Kernel64Patcher
-            git clone --recursive https://github.com/y08wilm/Kernel64Patcher
+            git clone --recursive https://github.com/wilm281/Kernel64Patcher
             cd Kernel64Patcher
             rm -rf ../Darwin/Kernel64Patcher
             make
@@ -79,7 +79,7 @@ if [[ $os =~ Darwin ]]; then
             cd ..
             rm -rf Kernel64Patcher
             rm -rf dsc64patcher
-            git clone --recursive https://github.com/y08wilm/dsc64patcher
+            git clone --recursive https://github.com/wilm281/dsc64patcher
             cd dsc64patcher
             rm -rf ../Darwin/dsc64patcher
             gcc Kernel64Patcher.c -o ../Darwin/dsc64patcher
