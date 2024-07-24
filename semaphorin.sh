@@ -139,6 +139,7 @@ Main operation mode:
     --dump-nand                Backs up the entire contents of your iOS device to disk0.gz
     --dualboot-hfs             This is an experimental dualboot feature for iOS 10.3.3 devices only
     --appleinternal            Enables internalization during restore
+    --no-prompt-replug         Disables the prompts to unplug and replug your usb cable
     --NoMoreSIGABRT            Adds the "protect" flag to /dev/disk0s1s2
     --disable-NoMoreSIGABRT    Removes the "protect" flag from /dev/disk0s1s2
     --restore-factorydata      Copies the factory data from your backed up records folder to your iOS device
@@ -185,6 +186,9 @@ parse_opt() {
             ;;
         --restore-factorydata)
             restore_factorydata=1
+            ;;
+        --no-prompt-replug)
+            no_prompt_replug=1
             ;;
         --restore-nand)
             restore_nand=1
@@ -541,24 +545,6 @@ _download_ramdisk_boot_files() {
                 else
                     hdiutil resize -size 60M "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg
                 fi
-                hdiutil attach -mountpoint /tmp/ramdisk "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg
-                sudo diskutil enableOwnership /tmp/ramdisk
-                gzip -d "$sshtars"/ssh.tar.gz
-                sudo "$bin"/gnutar -xvf "$sshtars"/ssh.tar -C /tmp/ramdisk
-                if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* || "$3" == "10."* || "$3" == "11."* ]]; then
-                    # fix scp
-                    sudo "$bin"/gnutar -xvf "$bin"/libcharset.1.dylib_libiconv.2.dylib.tar -C /tmp/ramdisk/usr/lib
-                fi
-                if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* || "$3" == "10."* || "$3" == "11."* || "$3" == "12."* || "$3" == "13.0"* || "$3" == "13.1"* || "$3" == "13.2"* || "$3" == "13.3"* ]]; then
-                    # fix scp
-                    sudo "$bin"/gnutar -xvf "$bin"/libresolv.9.dylib.tar -C /tmp/ramdisk/usr/lib
-                fi
-                # gptfdisk automation shenanigans
-                sudo "$bin"/gnutar -xvf "$dir"/jb/gpt.txt_hfs_dualboot.tar -C /tmp/ramdisk
-                sudo "$bin"/gnutar -xvf "$dir"/jb/gpt.txt.tar -C /tmp/ramdisk
-                # fixup update partition script, i.e. changes all Update partitions to UpdateX partitions
-                sudo "$bin"/gnutar -xvf "$dir"/jb/fixup_update_partition.tar -C /tmp/ramdisk
-                hdiutil detach /tmp/ramdisk
                 "$bin"/img4tool -c "$dir"/$1/$cpid/ramdisk/$3/ramdisk.im4p -t rdsk "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg
                 "$bin"/img4tool -c "$dir"/$1/$cpid/ramdisk/$3/ramdisk.img4 -p "$dir"/$1/$cpid/ramdisk/$3/ramdisk.im4p -m IM4M
                 if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$3" == "9."* ]]; then
@@ -1916,18 +1902,20 @@ if [[ "$boot_clean" == 1 ]]; then
     _download_clean_boot_files $deviceid $replace $version
     _kill_if_running iproxy
     sudo killall -STOP -c usbd
-    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-        echo "[*] Waiting 10 seconds before continuing.."
-        sleep 10
-    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-        echo "[*] Ok no problem, continuing.."
-    else
-        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-        echo "[*] Waiting 10 seconds before continuing.."
-        sleep 10
+    if [[ ! "$no_prompt_replug" == 1 ]]; then
+        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+            echo "[*] Waiting 10 seconds before continuing.."
+            sleep 10
+        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+            echo "[*] Ok no problem, continuing.."
+        else
+            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+            echo "[*] Waiting 10 seconds before continuing.."
+            sleep 10
+        fi
     fi
     if [ -e "$dir"/$deviceid/clean/$cpid/$version/iBSS.img4 ]; then
         cd "$dir"/$deviceid/clean/$cpid/$version
@@ -1942,18 +1930,20 @@ if [[ "$boot" == 1 ]]; then
     if [[ "$version" == "7."* && "$dualboot_hfs" == 1 ]]; then
         _kill_if_running iproxy
         sudo killall -STOP -c usbd
-        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-            echo "[*] Waiting 10 seconds before continuing.."
-            sleep 10
-        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-            echo "[*] Ok no problem, continuing.."
-        else
-            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-            echo "[*] Waiting 10 seconds before continuing.."
-            sleep 10
+        if [[ ! "$no_prompt_replug" == 1 ]]; then
+            read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+            if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                echo "[*] Waiting 10 seconds before continuing.."
+                sleep 10
+            elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                echo "[*] Ok no problem, continuing.."
+            else
+                echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                echo "[*] Waiting 10 seconds before continuing.."
+                sleep 10
+            fi
         fi
         _download_ramdisk_boot_files $deviceid $replace 8.4.1
         cd "$dir"/$deviceid/$cpid/ramdisk/8.4.1
@@ -1963,18 +1953,20 @@ if [[ "$boot" == 1 ]]; then
         echo "[*] Waiting 6 seconds before continuing.."
         sleep 6
         sudo killall -STOP -c usbd
-        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-            echo "[*] Waiting 10 seconds before continuing.."
-            sleep 10
-        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-            echo "[*] Ok no problem, continuing.."
-        else
-            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-            echo "[*] Waiting 10 seconds before continuing.."
-            sleep 10
+        if [[ ! "$no_prompt_replug" == 1 ]]; then
+            read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+            if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                echo "[*] Waiting 10 seconds before continuing.."
+                sleep 10
+            elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                echo "[*] Ok no problem, continuing.."
+            else
+                echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                echo "[*] Waiting 10 seconds before continuing.."
+                sleep 10
+            fi
         fi
         "$bin"/iproxy 2222 22 &
         "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/sbin/fsck'
@@ -2029,18 +2021,20 @@ if [[ "$boot" == 1 ]]; then
     fi
     _kill_if_running iproxy
     sudo killall -STOP -c usbd
-    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-        echo "[*] Waiting 10 seconds before continuing.."
-        sleep 10
-    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-        echo "[*] Ok no problem, continuing.."
-    else
-        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-        echo "[*] Waiting 10 seconds before continuing.."
-        sleep 10
+    if [[ ! "$no_prompt_replug" == 1 ]]; then
+        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+            echo "[*] Waiting 10 seconds before continuing.."
+            sleep 10
+        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+            echo "[*] Ok no problem, continuing.."
+        else
+            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+            echo "[*] Waiting 10 seconds before continuing.."
+            sleep 10
+        fi
     fi
     if [ -e "$dir"/$deviceid/$cpid/$version/iBSS.img4 ]; then
         cd "$dir"/$deviceid/$cpid/$version
@@ -2104,18 +2098,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         fi
         _wait_for_dfu
         sudo killall -STOP -c usbd
-        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-            echo "[*] Waiting 10 seconds before continuing.."
-            sleep 10
-        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-            echo "[*] Ok no problem, continuing.."
-        else
-            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-            echo "[*] Waiting 10 seconds before continuing.."
-            sleep 10
+        if [[ ! "$no_prompt_replug" == 1 ]]; then
+            read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+            if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                echo "[*] Waiting 10 seconds before continuing.."
+                sleep 10
+            elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                echo "[*] Ok no problem, continuing.."
+            else
+                echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                echo "[*] Waiting 10 seconds before continuing.."
+                sleep 10
+            fi
         fi
         cd "$dir"/$deviceid/$cpid/ramdisk/$rdversion
         pongo=0
@@ -2215,18 +2211,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         fi
         _wait_for_dfu
         sudo killall -STOP -c usbd
-        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-            echo "[*] Waiting 10 seconds before continuing.."
-            sleep 10
-        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-            echo "[*] Ok no problem, continuing.."
-        else
-            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-            echo "[*] Waiting 10 seconds before continuing.."
-            sleep 10
+        if [[ ! "$no_prompt_replug" == 1 ]]; then
+            read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+            if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                echo "[*] Waiting 10 seconds before continuing.."
+                sleep 10
+            elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                echo "[*] Ok no problem, continuing.."
+            else
+                echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                echo "[*] Waiting 10 seconds before continuing.."
+                sleep 10
+            fi
         fi
         if [[ ! -e "$dir"/$deviceid/0.0/apticket.der || ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 || ! -e "$dir"/$deviceid/0.0/keybags ]]; then
             cd "$dir"/$deviceid/$cpid/ramdisk/$r
@@ -2297,18 +2295,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
     echo "[*] Waiting 6 seconds before continuing.."
     sleep 6
     sudo killall -STOP -c usbd
-    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-        echo "[*] Waiting 10 seconds before continuing.."
-        sleep 10
-    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-        echo "[*] Ok no problem, continuing.."
-    else
-        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-        echo "[*] Waiting 10 seconds before continuing.."
-        sleep 10
+    if [[ ! "$no_prompt_replug" == 1 ]]; then
+        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+            echo "[*] Waiting 10 seconds before continuing.."
+            sleep 10
+        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+            echo "[*] Ok no problem, continuing.."
+        else
+            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+            echo "[*] Waiting 10 seconds before continuing.."
+            sleep 10
+        fi
     fi
     "$bin"/iproxy 2222 22 &
     sleep 2
@@ -2480,18 +2480,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 fi
                 _wait_for_dfu
                 sudo killall -STOP -c usbd
-                read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
-                elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                    echo "[*] Ok no problem, continuing.."
-                else
-                    echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
+                if [[ ! "$no_prompt_replug" == 1 ]]; then
+                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                        echo "[*] Ok no problem, continuing.."
+                    else
+                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    fi
                 fi
                 if [[ "$version" == "7."* || "$version" == "8."* ]]; then
                     if [ "$os" = "Darwin" ]; then
@@ -2530,18 +2532,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 echo "[*] Waiting 6 seconds before continuing.."
                 sleep 6
                 sudo killall -STOP -c usbd
-                read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
-                elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                    echo "[*] Ok no problem, continuing.."
-                else
-                    echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
+                if [[ ! "$no_prompt_replug" == 1 ]]; then
+                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                        echo "[*] Ok no problem, continuing.."
+                    else
+                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    fi
                 fi
                 "$bin"/iproxy 2222 22 &
             fi
@@ -2794,18 +2798,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     fi
                     _wait_for_dfu
                     sudo killall -STOP -c usbd
-                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                        echo "[*] Ok no problem, continuing.."
-                    else
-                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
+                    if [[ ! "$no_prompt_replug" == 1 ]]; then
+                        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                            echo "[*] Waiting 10 seconds before continuing.."
+                            sleep 10
+                        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                            echo "[*] Ok no problem, continuing.."
+                        else
+                            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                            echo "[*] Waiting 10 seconds before continuing.."
+                            sleep 10
+                        fi
                     fi
                     if [[ "$version" == "7."* || "$version" == "8."* ]]; then
                         if [ "$os" = "Darwin" ]; then
@@ -2826,18 +2832,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     echo "[*] Waiting 6 seconds before continuing.."
                     sleep 6
                     sudo killall -STOP -c usbd
-                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                        echo "[*] Ok no problem, continuing.."
-                    else
-                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
+                    if [[ ! "$no_prompt_replug" == 1 ]]; then
+                        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                            echo "[*] Waiting 10 seconds before continuing.."
+                            sleep 10
+                        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                            echo "[*] Ok no problem, continuing.."
+                        else
+                            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                            echo "[*] Waiting 10 seconds before continuing.."
+                            sleep 10
+                        fi
                     fi
                     "$bin"/iproxy 2222 22 &
                 fi
@@ -2898,18 +2906,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     fi
                     _wait_for_dfu
                     sudo killall -STOP -c usbd
-                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                        echo "[*] Ok no problem, continuing.."
-                    else
-                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
+                    if [[ ! "$no_prompt_replug" == 1 ]]; then
+                        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                            echo "[*] Waiting 10 seconds before continuing.."
+                            sleep 10
+                        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                            echo "[*] Ok no problem, continuing.."
+                        else
+                            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                            echo "[*] Waiting 10 seconds before continuing.."
+                            sleep 10
+                        fi
                     fi
                     if [[ "$version" == "7."* || "$version" == "8."* ]]; then
                         if [ "$os" = "Darwin" ]; then
@@ -2930,18 +2940,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     echo "[*] Waiting 6 seconds before continuing.."
                     sleep 6
                     sudo killall -STOP -c usbd
-                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                        echo "[*] Ok no problem, continuing.."
-                    else
-                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
+                    if [[ ! "$no_prompt_replug" == 1 ]]; then
+                        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                            echo "[*] Waiting 10 seconds before continuing.."
+                            sleep 10
+                        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                            echo "[*] Ok no problem, continuing.."
+                        else
+                            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                            echo "[*] Waiting 10 seconds before continuing.."
+                            sleep 10
+                        fi
                     fi
                     "$bin"/iproxy 2222 22 &
                 }
@@ -2994,18 +3006,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 fi
                 _wait_for_dfu
                 sudo killall -STOP -c usbd
-                read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
-                elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                    echo "[*] Ok no problem, continuing.."
-                else
-                    echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
+                if [[ ! "$no_prompt_replug" == 1 ]]; then
+                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                        echo "[*] Ok no problem, continuing.."
+                    else
+                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    fi
                 fi
                 if [[ "$version" == "7."* || "$version" == "8."* ]]; then
                     if [ "$os" = "Darwin" ]; then
@@ -3026,18 +3040,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 echo "[*] Waiting 6 seconds before continuing.."
                 sleep 6
                 sudo killall -STOP -c usbd
-                read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
-                elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                    echo "[*] Ok no problem, continuing.."
-                else
-                    echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
+                if [[ ! "$no_prompt_replug" == 1 ]]; then
+                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                        echo "[*] Ok no problem, continuing.."
+                    else
+                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    fi
                 fi
                 "$bin"/iproxy 2222 22 &
             fi
@@ -3092,18 +3108,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             fi
             _wait_for_dfu
             sudo killall -STOP -c usbd
-            read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-            if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                echo "[*] Waiting 10 seconds before continuing.."
-                sleep 10
-            elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                echo "[*] Ok no problem, continuing.."
-            else
-                echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                echo "[*] Waiting 10 seconds before continuing.."
-                sleep 10
+            if [[ ! "$no_prompt_replug" == 1 ]]; then
+                read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                    echo "[*] Waiting 10 seconds before continuing.."
+                    sleep 10
+                elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                    echo "[*] Ok no problem, continuing.."
+                else
+                    echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                    echo "[*] Waiting 10 seconds before continuing.."
+                    sleep 10
+                fi
             fi
             if [[ "$version" == "7."* || "$version" == "8."* ]]; then
                 if [ "$os" = "Darwin" ]; then
@@ -3124,18 +3142,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             echo "[*] Waiting 6 seconds before continuing.."
             sleep 6
             sudo killall -STOP -c usbd
-            read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-            if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                echo "[*] Waiting 10 seconds before continuing.."
-                sleep 10
-            elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                echo "[*] Ok no problem, continuing.."
-            else
-                echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                echo "[*] Waiting 10 seconds before continuing.."
-                sleep 10
+            if [[ ! "$no_prompt_replug" == 1 ]]; then
+                read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                    echo "[*] Waiting 10 seconds before continuing.."
+                    sleep 10
+                elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                    echo "[*] Ok no problem, continuing.."
+                else
+                    echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                    echo "[*] Waiting 10 seconds before continuing.."
+                    sleep 10
+                fi
             fi
             "$bin"/iproxy 2222 22 &
             if [ "$os" = "Darwin" ]; then
@@ -3637,18 +3657,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     fi
                     _wait_for_dfu
                     sudo killall -STOP -c usbd
-                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                        echo "[*] Ok no problem, continuing.."
-                    else
-                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
+                    if [[ ! "$no_prompt_replug" == 1 ]]; then
+                        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                            echo "[*] Waiting 10 seconds before continuing.."
+                            sleep 10
+                        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                            echo "[*] Ok no problem, continuing.."
+                        else
+                            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                            echo "[*] Waiting 10 seconds before continuing.."
+                            sleep 10
+                        fi
                     fi
                     if [[ "$version" == "7."* || "$version" == "8."* ]]; then
                         cd "$dir"/$deviceid/$cpid/ramdisk/8.4.1
@@ -3665,18 +3687,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     echo "[*] Waiting 6 seconds before continuing.."
                     sleep 6
                     sudo killall -STOP -c usbd
-                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                        echo "[*] Ok no problem, continuing.."
-                    else
-                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
+                    if [[ ! "$no_prompt_replug" == 1 ]]; then
+                        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                            echo "[*] Waiting 10 seconds before continuing.."
+                            sleep 10
+                        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                            echo "[*] Ok no problem, continuing.."
+                        else
+                            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                            echo "[*] Waiting 10 seconds before continuing.."
+                            sleep 10
+                        fi
                     fi
                     "$bin"/iproxy 2222 22 &
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/sbin/fsck'
@@ -4023,18 +4047,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 fi
                 _wait_for_dfu
                 sudo killall -STOP -c usbd
-                read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
-                elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                    echo "[*] Ok no problem, continuing.."
-                else
-                    echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
+                if [[ ! "$no_prompt_replug" == 1 ]]; then
+                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                        echo "[*] Ok no problem, continuing.."
+                    else
+                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    fi
                 fi
                 cd "$dir"/$deviceid/clean/$cpid/$r
                 _boot
@@ -4085,18 +4111,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 fi
                 _wait_for_dfu
                 sudo killall -STOP -c usbd
-                read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
-                elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                    echo "[*] Ok no problem, continuing.."
-                else
-                    echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
+                if [[ ! "$no_prompt_replug" == 1 ]]; then
+                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                        echo "[*] Ok no problem, continuing.."
+                    else
+                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    fi
                 fi
                 if [[ "$version" == "7."* || "$version" == "8."* ]]; then
                     cd "$dir"/$deviceid/$cpid/ramdisk/8.4.1
@@ -4113,18 +4141,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 echo "[*] Waiting 6 seconds before continuing.."
                 sleep 6
                 sudo killall -STOP -c usbd
-                read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
-                elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                    echo "[*] Ok no problem, continuing.."
-                else
-                    echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
+                if [[ ! "$no_prompt_replug" == 1 ]]; then
+                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                        echo "[*] Ok no problem, continuing.."
+                    else
+                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    fi
                 fi
                 "$bin"/iproxy 2222 22 &
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s1 /mnt1" 2> /dev/null
@@ -4181,18 +4211,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 fi
                 _wait_for_dfu
                 sudo killall -STOP -c usbd
-                read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
-                elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                    echo "[*] Ok no problem, continuing.."
-                else
-                    echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
+                if [[ ! "$no_prompt_replug" == 1 ]]; then
+                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                        echo "[*] Ok no problem, continuing.."
+                    else
+                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    fi
                 fi
                 cd "$dir"/$deviceid/clean/$cpid/$r
                 _boot
@@ -4245,18 +4277,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     fi
                     _wait_for_dfu
                     sudo killall -STOP -c usbd
-                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                        echo "[*] Ok no problem, continuing.."
-                    else
-                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
+                    if [[ ! "$no_prompt_replug" == 1 ]]; then
+                        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                            echo "[*] Waiting 10 seconds before continuing.."
+                            sleep 10
+                        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                            echo "[*] Ok no problem, continuing.."
+                        else
+                            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                            echo "[*] Waiting 10 seconds before continuing.."
+                            sleep 10
+                        fi
                     fi
                     if [[ "$version" == "7."* || "$version" == "8."* ]]; then
                         cd "$dir"/$deviceid/$cpid/ramdisk/8.4.1
@@ -4273,18 +4307,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     echo "[*] Waiting 6 seconds before continuing.."
                     sleep 6
                     sudo killall -STOP -c usbd
-                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                        echo "[*] Ok no problem, continuing.."
-                    else
-                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
+                    if [[ ! "$no_prompt_replug" == 1 ]]; then
+                        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                            echo "[*] Waiting 10 seconds before continuing.."
+                            sleep 10
+                        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                            echo "[*] Ok no problem, continuing.."
+                        else
+                            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                            echo "[*] Waiting 10 seconds before continuing.."
+                            sleep 10
+                        fi
                     fi
                     "$bin"/iproxy 2222 22 &
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/sbin/fsck'
@@ -4355,18 +4391,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     fi
                     _wait_for_dfu
                     sudo killall -STOP -c usbd
-                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                        echo "[*] Ok no problem, continuing.."
-                    else
-                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
+                    if [[ ! "$no_prompt_replug" == 1 ]]; then
+                        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                            echo "[*] Waiting 10 seconds before continuing.."
+                            sleep 10
+                        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                            echo "[*] Ok no problem, continuing.."
+                        else
+                            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                            echo "[*] Waiting 10 seconds before continuing.."
+                            sleep 10
+                        fi
                     fi
                     cd "$dir"/$deviceid/$cpid/$version
                     _boot
@@ -4419,18 +4457,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 fi
                 _wait_for_dfu
                 sudo killall -STOP -c usbd
-                read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
-                elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                    echo "[*] Ok no problem, continuing.."
-                else
-                    echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
+                if [[ ! "$no_prompt_replug" == 1 ]]; then
+                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                        echo "[*] Ok no problem, continuing.."
+                    else
+                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    fi
                 fi
                 if [[ "$version" == "7."* || "$version" == "8."* ]]; then
                     cd "$dir"/$deviceid/$cpid/ramdisk/8.4.1
@@ -4447,18 +4487,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 echo "[*] Waiting 6 seconds before continuing.."
                 sleep 6
                 sudo killall -STOP -c usbd
-                read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
-                elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                    echo "[*] Ok no problem, continuing.."
-                else
-                    echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
+                if [[ ! "$no_prompt_replug" == 1 ]]; then
+                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                        echo "[*] Ok no problem, continuing.."
+                    else
+                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                        echo "[*] Waiting 10 seconds before continuing.."
+                        sleep 10
+                    fi
                 fi
                 "$bin"/iproxy 2222 22 &
                 if [[ "$version" == "9.3"* || "$version" == "10.0"* || "$version" == "10.1"* || "$version" == "10.2"* ]]; then
@@ -4563,18 +4605,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             fi
             _wait_for_dfu
             sudo killall -STOP -c usbd
-            read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-            if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                echo "[*] Waiting 10 seconds before continuing.."
-                sleep 10
-            elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                echo "[*] Ok no problem, continuing.."
-            else
-                echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                echo "[*] Waiting 10 seconds before continuing.."
-                sleep 10
+            if [[ ! "$no_prompt_replug" == 1 ]]; then
+                read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+                if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                    echo "[*] Waiting 10 seconds before continuing.."
+                    sleep 10
+                elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                    echo "[*] Ok no problem, continuing.."
+                else
+                    echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                    echo "[*] Waiting 10 seconds before continuing.."
+                    sleep 10
+                fi
             fi
             cd "$dir"/$deviceid/$cpid/$version
             _boot
