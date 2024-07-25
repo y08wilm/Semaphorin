@@ -545,6 +545,24 @@ _download_ramdisk_boot_files() {
                 else
                     hdiutil resize -size 60M "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg
                 fi
+                hdiutil attach -mountpoint /tmp/ramdisk "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg
+                sudo diskutil enableOwnership /tmp/ramdisk
+                gzip -d "$sshtars"/ssh.tar.gz
+                sudo "$bin"/gnutar -xvf "$sshtars"/ssh.tar -C /tmp/ramdisk
+                if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* || "$3" == "10."* || "$3" == "11."* ]]; then
+                    # fix scp
+                    sudo "$bin"/gnutar -xvf "$bin"/libcharset.1.dylib_libiconv.2.dylib.tar -C /tmp/ramdisk/usr/lib
+                fi
+                if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* || "$3" == "10."* || "$3" == "11."* || "$3" == "12."* || "$3" == "13.0"* || "$3" == "13.1"* || "$3" == "13.2"* || "$3" == "13.3"* ]]; then
+                    # fix scp
+                    sudo "$bin"/gnutar -xvf "$bin"/libresolv.9.dylib.tar -C /tmp/ramdisk/usr/lib
+                fi
+                # gptfdisk automation shenanigans
+                sudo "$bin"/gnutar -xvf "$dir"/jb/gpt.txt_hfs_dualboot.tar -C /tmp/ramdisk
+                sudo "$bin"/gnutar -xvf "$dir"/jb/gpt.txt.tar -C /tmp/ramdisk
+                # fixup update partition script, i.e. changes all Update partitions to UpdateX partitions
+                sudo "$bin"/gnutar -xvf "$dir"/jb/fixup_update_partition.tar -C /tmp/ramdisk
+                hdiutil detach /tmp/ramdisk
                 "$bin"/img4tool -c "$dir"/$1/$cpid/ramdisk/$3/ramdisk.im4p -t rdsk "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg
                 "$bin"/img4tool -c "$dir"/$1/$cpid/ramdisk/$3/ramdisk.img4 -p "$dir"/$1/$cpid/ramdisk/$3/ramdisk.im4p -m IM4M
                 if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$3" == "9."* ]]; then
