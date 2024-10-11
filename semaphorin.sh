@@ -25,10 +25,10 @@ for cmd in curl unzip python3 git ssh scp killall sudo grep pgrep ${linux_cmds};
         if [ "$cmd" = "python3" ]; then
             echo "[-] Command '${cmd}' not installed, please install it!";
             if [ "$os" = 'Darwin' ]; then
-                if [ ! -e python-3.7.6-macosx10.6.pkg ]; then
-                    curl -k https://www.python.org/ftp/python/3.7.6/python-3.7.6-macosx10.6.pkg -o python-3.7.6-macosx10.6.pkg
+                if [ ! -e python-3.11.9-macos11.pkg ]; then
+                    curl -k https://www.python.org/ftp/python/3.11.9/python-3.11.9-macos11.pkg -o python-3.11.9-macos11.pkg
                 fi
-                open -W python-3.7.6-macosx10.6.pkg
+                open -W python-3.11.9-macos11.pkg
             fi
             if ! command -v "${cmd}" > /dev/null; then
                 cmd_not_found=1
@@ -632,14 +632,14 @@ _download_ramdisk_boot_files() {
                     "$bin"/img4 -i "$dir"/$1/$cpid/ramdisk/$3/kernelcache.dec -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache -M IM4M -T krnl -P "$dir"/$1/$cpid/ramdisk/$3/kc.bpatch
                 else
                     if [[ "$deviceid" == *'iPhone8'* ]] || [[ "$deviceid" == *'iPad6'* ]] || [[ "$deviceid" == *'iPad5'* ]]; then
-                        pyimg4 im4p create -i "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p.img4 --extra "$dir"/$1/$cpid/ramdisk/$3/kpp.bin -f rkrn --lzss
-                        pyimg4 im4p create -i "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p --extra "$dir"/$1/$cpid/ramdisk/$3/kpp.bin -f krnl --lzss
+                        python3 -m pyimg4 im4p create -i "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p.img4 --extra "$dir"/$1/$cpid/ramdisk/$3/kpp.bin -f rkrn --lzss
+                        python3 -m pyimg4 im4p create -i "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p --extra "$dir"/$1/$cpid/ramdisk/$3/kpp.bin -f krnl --lzss
                     else
-                        pyimg4 im4p create -i "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p.img4 -f rkrn --lzss
-                        pyimg4 im4p create -i "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p -f krnl --lzss
+                        python3 -m pyimg4 im4p create -i "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p.img4 -f rkrn --lzss
+                        python3 -m pyimg4 im4p create -i "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p -f krnl --lzss
                     fi
-                    pyimg4 img4 create -p "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p.img4 -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.img4 -m IM4M
-                    pyimg4 img4 create -p "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache -m IM4M
+                    python3 -m pyimg4 img4 create -p "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p.img4 -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.img4 -m IM4M
+                    python3 -m pyimg4 img4 create -p "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache -m IM4M
                 fi
                 if [[ ! "$3" == "7."* && ! "$3" == "8."* && ! "$3" == "9."* && ! "$3" == "10."* && ! "$3" == "11."* ]]; then
                     "$bin"/img4 -i "$dir"/$1/$cpid/ramdisk/$3/trustcache.im4p -o "$dir"/$1/$cpid/ramdisk/$3/trustcache.img4 -M IM4M -T rtsc
@@ -725,14 +725,14 @@ _download_ramdisk_boot_files() {
                     "$bin"/img4 -i "$dir"/$1/$cpid/ramdisk/$3/kernelcache.dec -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache -M IM4M -T krnl -P "$dir"/$1/$cpid/ramdisk/$3/kc.bpatch
                 else
                     if [[ "$deviceid" == *'iPhone8'* ]] || [[ "$deviceid" == *'iPad6'* ]] || [[ "$deviceid" == *'iPad5'* ]]; then
-                        pyimg4 im4p create -i "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p.img4 --extra "$dir"/$1/$cpid/ramdisk/$3/kpp.bin -f rkrn --lzss
-                        pyimg4 im4p create -i "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p --extra "$dir"/$1/$cpid/ramdisk/$3/kpp.bin -f krnl --lzss
+                        python3 -m pyimg4 im4p create -i "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p.img4 --extra "$dir"/$1/$cpid/ramdisk/$3/kpp.bin -f rkrn --lzss
+                        python3 -m pyimg4 im4p create -i "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p --extra "$dir"/$1/$cpid/ramdisk/$3/kpp.bin -f krnl --lzss
                     else
-                        pyimg4 im4p create -i "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p.img4 -f rkrn --lzss
-                        pyimg4 im4p create -i "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p -f krnl --lzss
+                        python3 -m pyimg4 im4p create -i "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p.img4 -f rkrn --lzss
+                        python3 -m pyimg4 im4p create -i "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p -f krnl --lzss
                     fi
-                    pyimg4 img4 create -p "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p.img4 -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.img4 -m IM4M
-                    pyimg4 img4 create -p "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache -m IM4M
+                    python3 -m pyimg4 img4 create -p "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p.img4 -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.img4 -m IM4M
+                    python3 -m pyimg4 img4 create -p "$dir"/$1/$cpid/ramdisk/$3/kernelcache.im4p -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache -m IM4M
                 fi
                 if [[ ! "$3" == "7."* && ! "$3" == "8."* && ! "$3" == "9."* && ! "$3" == "10."* && ! "$3" == "11."* ]]; then
                     "$bin"/img4 -i "$dir"/$1/$cpid/ramdisk/$3/trustcache.im4p -o "$dir"/$1/$cpid/ramdisk/$3/trustcache.img4 -M IM4M -T rtsc
@@ -852,13 +852,13 @@ _download_boot_files() {
                         ivkey="$iv$key"
                         "$bin"/img4 -i $fn -o "$dir"/$1/$cpid/$3/kcache.raw -k $ivkey
                         "$bin"/img4 -i $fn -o "$dir"/$1/$cpid/$3/kernelcache.dec -k $ivkey -D
-                        pyimg4 im4p extract -i $fn -o "$dir"/$1/$cpid/$3/kcache.raw.pyimg4 --iv $iv --key $key --extra "$dir"/$1/$cpid/$3/kpp.bin
+                        python3 -m pyimg4 im4p extract -i $fn -o "$dir"/$1/$cpid/$3/kcache.raw.pyimg4 --iv $iv --key $key --extra "$dir"/$1/$cpid/$3/kpp.bin
                     else
                         "$bin"/img4 -i $fn -o "$dir"/$1/$cpid/$3/kcache.raw -k $ivkey
                         "$bin"/img4 -i $fn -o "$dir"/$1/$cpid/$3/kernelcache.dec -k $ivkey -D
                         iv="${ivkey:0:32}"
                         key="${ivkey:32}"
-                        pyimg4 im4p extract -i $fn -o "$dir"/$1/$cpid/$3/kcache.raw.pyimg4 --iv $iv --key $key --extra "$dir"/$1/$cpid/$3/kpp.bin
+                        python3 -m pyimg4 im4p extract -i $fn -o "$dir"/$1/$cpid/$3/kcache.raw.pyimg4 --iv $iv --key $key --extra "$dir"/$1/$cpid/$3/kpp.bin
                     fi
                 else
                     kbag=$("$bin"/img4 -i $fn -b | head -n 1)
@@ -867,12 +867,12 @@ _download_boot_files() {
                     ivkey="$iv$key"
                     "$bin"/img4 -i $fn -o "$dir"/$1/$cpid/$3/kcache.raw -k $ivkey
                     "$bin"/img4 -i $fn -o "$dir"/$1/$cpid/$3/kernelcache.dec -k $ivkey -D
-                    pyimg4 im4p extract -i $fn -o "$dir"/$1/$cpid/$3/kcache.raw.pyimg4 --iv $iv --key $key --extra "$dir"/$1/$cpid/$3/kpp.bin
+                    python3 -m pyimg4 im4p extract -i $fn -o "$dir"/$1/$cpid/$3/kcache.raw.pyimg4 --iv $iv --key $key --extra "$dir"/$1/$cpid/$3/kpp.bin
                 fi
             else
                 "$bin"/img4 -i $(awk "/""$replace""/{x=1}x&&/kernelcache.release/{print;exit}" BuildManifest.plist | grep '<string>' | cut -d\> -f2 | cut -d\< -f1) -o "$dir"/$1/$cpid/$3/kcache.raw
                 "$bin"/img4 -i $(awk "/""$replace""/{x=1}x&&/kernelcache.release/{print;exit}" BuildManifest.plist | grep '<string>' | cut -d\> -f2 | cut -d\< -f1) -o "$dir"/$1/$cpid/$3/kernelcache.dec -D
-                pyimg4 im4p extract -i $(awk "/""$replace""/{x=1}x&&/kernelcache.release/{print;exit}" BuildManifest.plist | grep '<string>' | cut -d\> -f2 | cut -d\< -f1) -o "$dir"/$1/$cpid/$3/kcache.raw.pyimg4 --iv $iv --key $key --extra "$dir"/$1/$cpid/$3/kpp.bin
+                python3 -m pyimg4 im4p extract -i $(awk "/""$replace""/{x=1}x&&/kernelcache.release/{print;exit}" BuildManifest.plist | grep '<string>' | cut -d\> -f2 | cut -d\< -f1) -o "$dir"/$1/$cpid/$3/kcache.raw.pyimg4 --iv $iv --key $key --extra "$dir"/$1/$cpid/$3/kpp.bin
             fi
         fi
         if [ ! -e "$dir"/$1/$cpid/$3/DeviceTree.dec ]; then
@@ -1252,14 +1252,14 @@ _download_boot_files() {
                 "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o "$dir"/$1/$cpid/$3/kernelcache -M IM4M -T krnl -P "$dir"/$1/$cpid/$3/kc.bpatch
             else
                 if [[ "$deviceid" == *'iPhone8'* ]] || [[ "$deviceid" == *'iPad6'* ]] || [[ "$deviceid" == *'iPad5'* ]]; then
-                    pyimg4 im4p create -i "$dir"/$1/$cpid/$3/kcache2.patched -o "$dir"/$1/$cpid/$3/kernelcache.im4p.img4 --extra "$dir"/$1/$cpid/$3/kpp.bin -f rkrn --lzss
-                    pyimg4 im4p create -i "$dir"/$1/$cpid/$3/kcache2.patched -o "$dir"/$1/$cpid/$3/kernelcache.im4p --extra "$dir"/$1/$cpid/$3/kpp.bin -f krnl --lzss
+                    python3 -m pyimg4 im4p create -i "$dir"/$1/$cpid/$3/kcache2.patched -o "$dir"/$1/$cpid/$3/kernelcache.im4p.img4 --extra "$dir"/$1/$cpid/$3/kpp.bin -f rkrn --lzss
+                    python3 -m pyimg4 im4p create -i "$dir"/$1/$cpid/$3/kcache2.patched -o "$dir"/$1/$cpid/$3/kernelcache.im4p --extra "$dir"/$1/$cpid/$3/kpp.bin -f krnl --lzss
                 else
-                    pyimg4 im4p create -i "$dir"/$1/$cpid/$3/kcache2.patched -o "$dir"/$1/$cpid/$3/kernelcache.im4p.img4 -f rkrn --lzss
-                    pyimg4 im4p create -i "$dir"/$1/$cpid/$3/kcache2.patched -o "$dir"/$1/$cpid/$3/kernelcache.im4p -f krnl --lzss
+                    python3 -m pyimg4 im4p create -i "$dir"/$1/$cpid/$3/kcache2.patched -o "$dir"/$1/$cpid/$3/kernelcache.im4p.img4 -f rkrn --lzss
+                    python3 -m pyimg4 im4p create -i "$dir"/$1/$cpid/$3/kcache2.patched -o "$dir"/$1/$cpid/$3/kernelcache.im4p -f krnl --lzss
                 fi
-                pyimg4 img4 create -p "$dir"/$1/$cpid/$3/kernelcache.im4p.img4 -o "$dir"/$1/$cpid/$3/kernelcache.img4 -m IM4M
-                pyimg4 img4 create -p "$dir"/$1/$cpid/$3/kernelcache.im4p -o "$dir"/$1/$cpid/$3/kernelcache -m IM4M
+                python3 -m pyimg4 img4 create -p "$dir"/$1/$cpid/$3/kernelcache.im4p.img4 -o "$dir"/$1/$cpid/$3/kernelcache.img4 -m IM4M
+                python3 -m pyimg4 img4 create -p "$dir"/$1/$cpid/$3/kernelcache.im4p -o "$dir"/$1/$cpid/$3/kernelcache -m IM4M
             fi
             if [ -e "$dir"/$1/$cpid/$3/trustcache.im4p ]; then
                 "$bin"/img4 -i "$dir"/$1/$cpid/$3/trustcache.im4p -o "$dir"/$1/$cpid/$3/trustcache.img4 -M IM4M -T rtsc
@@ -1291,14 +1291,14 @@ _download_boot_files() {
             #"$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched -u 14 -f 14
             "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched -w -f 14
             if [[ "$deviceid" == *'iPhone8'* ]] || [[ "$deviceid" == *'iPad6'* ]] || [[ "$deviceid" == *'iPad5'* ]]; then
-                pyimg4 im4p create -i "$dir"/$1/$cpid/$3/kcache2.patched -o "$dir"/$1/$cpid/$3/kernelcache.im4p.img4 --extra "$dir"/$1/$cpid/$3/kpp.bin -f rkrn --lzss
-                pyimg4 im4p create -i "$dir"/$1/$cpid/$3/kcache2.patched -o "$dir"/$1/$cpid/$3/kernelcache.im4p --extra "$dir"/$1/$cpid/$3/kpp.bin -f krnl --lzss
+                python3 -m pyimg4 im4p create -i "$dir"/$1/$cpid/$3/kcache2.patched -o "$dir"/$1/$cpid/$3/kernelcache.im4p.img4 --extra "$dir"/$1/$cpid/$3/kpp.bin -f rkrn --lzss
+                python3 -m pyimg4 im4p create -i "$dir"/$1/$cpid/$3/kcache2.patched -o "$dir"/$1/$cpid/$3/kernelcache.im4p --extra "$dir"/$1/$cpid/$3/kpp.bin -f krnl --lzss
             else
-                pyimg4 im4p create -i "$dir"/$1/$cpid/$3/kcache2.patched -o "$dir"/$1/$cpid/$3/kernelcache.im4p.img4 -f rkrn --lzss
-                pyimg4 im4p create -i "$dir"/$1/$cpid/$3/kcache2.patched -o "$dir"/$1/$cpid/$3/kernelcache.im4p -f krnl --lzss
+                python3 -m pyimg4 im4p create -i "$dir"/$1/$cpid/$3/kcache2.patched -o "$dir"/$1/$cpid/$3/kernelcache.im4p.img4 -f rkrn --lzss
+                python3 -m pyimg4 im4p create -i "$dir"/$1/$cpid/$3/kcache2.patched -o "$dir"/$1/$cpid/$3/kernelcache.im4p -f krnl --lzss
             fi
-            pyimg4 img4 create -p "$dir"/$1/$cpid/$3/kernelcache.im4p.img4 -o "$dir"/$1/$cpid/$3/kernelcache.img4 -m IM4M
-            pyimg4 img4 create -p "$dir"/$1/$cpid/$3/kernelcache.im4p -o "$dir"/$1/$cpid/$3/kernelcache -m IM4M
+            python3 -m pyimg4 img4 create -p "$dir"/$1/$cpid/$3/kernelcache.im4p.img4 -o "$dir"/$1/$cpid/$3/kernelcache.img4 -m IM4M
+            python3 -m pyimg4 img4 create -p "$dir"/$1/$cpid/$3/kernelcache.im4p -o "$dir"/$1/$cpid/$3/kernelcache -m IM4M
             if [ -e "$dir"/$1/$cpid/$3/trustcache.im4p ]; then
                 "$bin"/img4 -i "$dir"/$1/$cpid/$3/trustcache.im4p -o "$dir"/$1/$cpid/$3/trustcache.img4 -M IM4M -T rtsc
                 "$bin"/img4 -i "$dir"/$1/$cpid/$3/trustcache.im4p -o "$dir"/$1/$cpid/$3/trustcache -M IM4M -T trst
@@ -1557,14 +1557,14 @@ _download_clean_boot_files() {
             "$bin"/img4 -i "$dir"/$1/clean/$cpid/$3/kernelcache.dec -o "$dir"/$1/clean/$cpid/$3/kernelcache -M IM4M -T krnl -P "$dir"/$1/clean/$cpid/$3/kc.bpatch
         else
             if [[ "$deviceid" == *'iPhone8'* ]] || [[ "$deviceid" == *'iPad6'* ]] || [[ "$deviceid" == *'iPad5'* ]]; then
-                pyimg4 im4p create -i "$dir"/$1/clean/$cpid/$3/kcache2.patched -o "$dir"/$1/clean/$cpid/$3/kernelcache.im4p.img4 --extra "$dir"/$1/clean/$cpid/$3/kpp.bin -f rkrn --lzss
-                pyimg4 im4p create -i "$dir"/$1/clean/$cpid/$3/kcache2.patched -o "$dir"/$1/clean/$cpid/$3/kernelcache.im4p --extra "$dir"/$1/clean/$cpid/$3/kpp.bin -f krnl --lzss
+                python3 -m pyimg4 im4p create -i "$dir"/$1/clean/$cpid/$3/kcache2.patched -o "$dir"/$1/clean/$cpid/$3/kernelcache.im4p.img4 --extra "$dir"/$1/clean/$cpid/$3/kpp.bin -f rkrn --lzss
+                python3 -m pyimg4 im4p create -i "$dir"/$1/clean/$cpid/$3/kcache2.patched -o "$dir"/$1/clean/$cpid/$3/kernelcache.im4p --extra "$dir"/$1/clean/$cpid/$3/kpp.bin -f krnl --lzss
             else
-                pyimg4 im4p create -i "$dir"/$1/clean/$cpid/$3/kcache2.patched -o "$dir"/$1/clean/$cpid/$3/kernelcache.im4p.img4 -f rkrn --lzss
-                pyimg4 im4p create -i "$dir"/$1/clean/$cpid/$3/kcache2.patched -o "$dir"/$1/clean/$cpid/$3/kernelcache.im4p -f krnl --lzss
+                python3 -m pyimg4 im4p create -i "$dir"/$1/clean/$cpid/$3/kcache2.patched -o "$dir"/$1/clean/$cpid/$3/kernelcache.im4p.img4 -f rkrn --lzss
+                python3 -m pyimg4 im4p create -i "$dir"/$1/clean/$cpid/$3/kcache2.patched -o "$dir"/$1/clean/$cpid/$3/kernelcache.im4p -f krnl --lzss
             fi
-            pyimg4 img4 create -p "$dir"/$1/clean/$cpid/$3/kernelcache.im4p.img4 -o "$dir"/$1/clean/$cpid/$3/kernelcache.img4 -m IM4M
-            pyimg4 img4 create -p "$dir"/$1/clean/$cpid/$3/kernelcache.im4p -o "$dir"/$1/clean/$cpid/$3/kernelcache -m IM4M
+            python3 -m pyimg4 img4 create -p "$dir"/$1/clean/$cpid/$3/kernelcache.im4p.img4 -o "$dir"/$1/clean/$cpid/$3/kernelcache.img4 -m IM4M
+            python3 -m pyimg4 img4 create -p "$dir"/$1/clean/$cpid/$3/kernelcache.im4p -o "$dir"/$1/clean/$cpid/$3/kernelcache -m IM4M
         fi
         if [ -e "$dir"/$1/clean/$cpid/$3/trustcache.im4p ]; then
             "$bin"/img4 -i "$dir"/$1/clean/$cpid/$3/trustcache.im4p -o "$dir"/$1/clean/$cpid/$3/trustcache.img4 -M IM4M -T rtsc
