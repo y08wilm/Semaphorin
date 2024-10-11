@@ -64,29 +64,10 @@ if [[ $os =~ Darwin ]]; then
     echo "[*] Running on Darwin..."
     sudo xattr -cr .
     os_ver=$(sw_vers -productVersion)
-    if [[ $os_ver =~ ^10\.1[3-4]\.* ]]; then
-        echo "[!] macOS/OS X $os_ver is not supported by this script. Please install macOS 10.15 (Catalina) or later to continue if possible."
+    if [[ $os_ver =~ ^10\.1[3]\.* ]]; then
+        echo "[!] macOS/OS X $os_ver is not supported by this script. Please install macOS 10.14 (Mojave) or later to continue if possible."
         sleep 1
         read -p "[*] You can press the enter key on your keyboard to skip this warning  " r1
-        if [[ ! -e "$bin"/.compiled ]]; then
-            rm -rf Kernel64Patcher
-            git clone --recursive https://github.com/wilm281/Kernel64Patcher
-            cd Kernel64Patcher
-            rm -rf ../Darwin/Kernel64Patcher
-            make
-            mv seprmvr64 Kernel64Patcher
-            cp Kernel64Patcher ../Darwin/Kernel64Patcher
-            cd ..
-            rm -rf Kernel64Patcher
-            rm -rf dsc64patcher
-            git clone --recursive https://github.com/wilm281/dsc64patcher
-            cd dsc64patcher
-            rm -rf ../Darwin/dsc64patcher
-            gcc Kernel64Patcher.c -o ../Darwin/dsc64patcher
-            touch ../Darwin/.compiled
-            cd ..
-            rm -rf dsc64patcher
-        fi
     else
         echo "[*] You are running macOS $os_ver. Continuing..."
     fi
