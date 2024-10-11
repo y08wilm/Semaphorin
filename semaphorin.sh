@@ -62,8 +62,9 @@ clean_usbmuxd() {
 
 if [[ $os =~ Darwin ]]; then
     echo "[*] Running on Darwin..."
-    sudo xattr -cr .
+    #sudo xattr -cr .
     os_ver=$(sw_vers -productVersion)
+    sudo killall -STOP AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
     if [[ $os_ver =~ ^10\.1[3]\.* ]]; then
         echo "[!] macOS/OS X $os_ver is not supported by this script. Please install macOS 10.14 (Mojave) or later to continue if possible."
         sleep 1
