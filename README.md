@@ -8,14 +8,6 @@
 <h4 align="center"> Uses seprmvr64 by mineek<h4>
 <h6 align="center"> Supports* iOS 7.0.6-12.1 as well as A7-A11 devices </h6>
 
-# IF YOUR DEVICE SUPPORTS [LEGACY-IOS-KIT](https://github.com/LukeZGD/Legacy-iOS-Kit), YOU SHOULD REALLY USE THAT OVER THIS.
-
-# SEMAPHORIN IS NOW DISCONTINUED, PLEASE ASK [Mineek](https://github.com/mineek) FOR WHAT THEY SUGGEST YOU TO USE.
-
-# IF YOU ARE IN THE SEMAPHORIN DISCORD SERVER, PLEASE LEAVE. IT IS NON OFFICIAL AS OF NOW.
-
-# YOU CAN USE [https://github.com/LukeZGD/Semaphorin](https://github.com/LukeZGD/Semaphorin) FOR FUTURE UPDATES.
-
 # Chart of compatibility
 
 | iOS         | App Store | Cydia       | Tweaks    | Respring| Cellular | Sideloadly | iTunes     |
@@ -79,6 +71,14 @@ At least 20GB of free space on your computer
 USB Type-A port and Lightning cable. USB Type-C ports will **NOT** work with this script. If you're using a Mac that only has a USB-C port (such as 12" MacBooks, and late Intel MacBook Airs) a dongle/dock with a USB-A port should work just fine with a standard USB-A to Lightning cable.
 
 Working iDevice: The script has to backup `apticket.der`, `sep-firmware.img4`, `Baseband`, and `keybags` from your device before you can downgrade to an older iOS version.
+
+## Support
+
+We now have a [Discord server](https://discord.gg/DafgXkSAV3) where you can get help with this project.
+
+If, for whatever reason, that invite link does not work, please contact wilma24.18 on Signal.
+
+The Discord server is strictly for Semaphorin support only. Please don't bring personal issues into our server.
 
 ## Setup.app bypass
 
