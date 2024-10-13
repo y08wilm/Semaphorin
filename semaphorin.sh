@@ -5293,19 +5293,9 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
 			fi
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cat /dev/rdisk1" | dd of=dump.raw bs=256 count=$((0x4000))
-            stat dump.raw
-            "$bin"/img4tool --convert -s dumped.shsh dump.raw
-            stat dumped.shsh
-            mv dumped.shsh "$dir"/$deviceid/0.0/shsh.shsh2
-            rm -rf dump.raw
             if [[ ! -e "$dir"/$deviceid/0.0/apticket.der || ! -e "$dir"/$deviceid/0.0/shsh.shsh2 || ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 || ! -e "$dir"/$deviceid/0.0/keybags ]]; then
                 echo "[*] An error occured while trying to back up the required files required to downgrade"
-                $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-                _kill_if_running iproxy
-                exit 0
             else
-                hit=1
                 echo "[*] Backed up the required files required to downgrade"
             fi
             mkdir -p "$dir"/$deviceid/0.0/
