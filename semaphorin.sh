@@ -1802,6 +1802,7 @@ _download_root_fs() {
             rm -rf rdsk.*
             rm -rf illb.*
             rm -rf ibot.*
+            rm -rf ibot2.*
             rm -rf ibss.*
             rm -rf ibec.*
             rm -rf ibec2.*
