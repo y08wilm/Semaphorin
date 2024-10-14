@@ -356,7 +356,7 @@ _download_ramdisk_boot_files() {
     if [ ! -e "$dir"/$1/$cpid/ramdisk/$3/ramdisk.img4 ]; then
         if [[ "$3" == "10."* ]]; then
             if [[ "$deviceid" == "iPhone8,1" || "$deviceid" == "iPhone8,2" ]]; then
-                ipswurl=$(curl -k -sL "https://api.ipsw.me/v4/device/$deviceid?type=ipsw" | "$bin"/jq '.firmwares | .[] | select(.version=="'11.4.1'")' | "$bin"/jq -s '.[0] | .url' --raw-output)
+                ipswurl=$(curl -k -sL "https://api.ipsw.me/v4/device/$deviceid?type=ipsw" | "$bin"/jq '.firmwares | .[] | select(.version=="'11.1'")' | "$bin"/jq -s '.[0] | .url' --raw-output)
             else
                 ipswurl=$(curl -k -sL "https://api.ipsw.me/v4/device/$deviceid?type=ipsw" | "$bin"/jq '.firmwares | .[] | select(.version=="'10.3.3'")' | "$bin"/jq -s '.[0] | .url' --raw-output)
             fi
@@ -368,7 +368,7 @@ _download_ramdisk_boot_files() {
             if [[ "$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e $3 $1)" == "true" ]]; then
                 if [[ "$3" == "10."* ]]; then
                     if [[ "$deviceid" == "iPhone8,1" || "$deviceid" == "iPhone8,2" ]]; then
-                        ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 11.4.1 $1)"
+                        ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 11.1 $1)"
                     else
                         ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 10.3.3 $1)"
                     fi
@@ -398,7 +398,7 @@ _download_ramdisk_boot_files() {
             if [[ "$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e $3 $1)" == "true" ]]; then
                 if [[ "$3" == "10."* ]]; then
                     if [[ "$deviceid" == "iPhone8,1" || "$deviceid" == "iPhone8,2" ]]; then
-                        ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 11.4.1 $1)"
+                        ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 11.1 $1)"
                     else
                         ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 10.3.3 $1)"
                     fi
@@ -738,7 +738,7 @@ _download_boot_files() {
     if [ ! -e "$dir"/$1/$cpid/$3/kernelcache ]; then
         if [[ "$3" == "10."* ]]; then
             if [[ "$deviceid" == "iPhone8,1" || "$deviceid" == "iPhone8,2" ]]; then
-                ipswurl=$(curl -k -sL "https://api.ipsw.me/v4/device/$deviceid?type=ipsw" | "$bin"/jq '.firmwares | .[] | select(.version=="'11.4.1'")' | "$bin"/jq -s '.[0] | .url' --raw-output)
+                ipswurl=$(curl -k -sL "https://api.ipsw.me/v4/device/$deviceid?type=ipsw" | "$bin"/jq '.firmwares | .[] | select(.version=="'11.1'")' | "$bin"/jq -s '.[0] | .url' --raw-output)
             else
                 ipswurl=$(curl -k -sL "https://api.ipsw.me/v4/device/$deviceid?type=ipsw" | "$bin"/jq '.firmwares | .[] | select(.version=="'10.3.3'")' | "$bin"/jq -s '.[0] | .url' --raw-output)
             fi
@@ -750,7 +750,7 @@ _download_boot_files() {
             if [[ "$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e $3 $1)" == "true" ]]; then
                 if [[ "$3" == "10."* ]]; then
                     if [[ "$deviceid" == "iPhone8,1" || "$deviceid" == "iPhone8,2" ]]; then
-                        ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 11.4.1 $1)"
+                        ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 11.1 $1)"
                     else
                         ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 10.3.3 $1)"
                     fi
@@ -782,7 +782,7 @@ _download_boot_files() {
             if [[ "$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e $3 $1)" == "true" ]]; then
                 if [[ "$3" == "10."* ]]; then
                     if [[ "$deviceid" == "iPhone8,1" || "$deviceid" == "iPhone8,2" ]]; then
-                        ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 11.4.1 $1)"
+                        ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 11.1 $1)"
                     else
                         ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 10.3.3 $1)"
                     fi
@@ -814,7 +814,7 @@ _download_boot_files() {
             if [[ "$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e $3 $1)" == "true" ]]; then
                 if [[ "$3" == "10."* ]]; then
                     if [[ "$deviceid" == "iPhone8,1" || "$deviceid" == "iPhone8,2" ]]; then
-                        ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 11.4.1 $1)"
+                        ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 11.1 $1)"
                     else
                         ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 10.3.3 $1)"
                     fi
@@ -840,16 +840,21 @@ _download_boot_files() {
                 "$bin"/img4 -i $fn -o "$dir"/$1/$cpid/$3/iBoot.dec -k $ivkey
             fi
         fi
-        if [[ "$3" == "10."* || "$3" == "9."* ]]; then
-            rm -rf BuildManifest.plist
-            ipswurl=$(curl -k -sL "https://api.ipsw.me/v4/device/$deviceid?type=ipsw" | "$bin"/jq '.firmwares | .[] | select(.version=="'$3'")' | "$bin"/jq -s '.[0] | .url' --raw-output)
-            "$bin"/pzb -g BuildManifest.plist "$ipswurl"
-        fi
         if [ ! -e "$dir"/$1/$cpid/$3/LLB.dec ]; then
             "$bin"/pzb -g $(awk "/""$replace""/{x=1}x&&/LLB[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1) "$ipswurl"
             fn="$(awk "/""$replace""/{x=1}x&&/LLB[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | sed 's/Firmware[/]all_flash[/]all_flash.*production[/]//' | sed 's/Firmware[/]all_flash[/]//')"
             if [[ "$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e $3 $1)" == "true" ]]; then
-                ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn $3 $1)"
+                if [[ "$3" == "10."* ]]; then
+                    if [[ "$deviceid" == "iPhone8,1" || "$deviceid" == "iPhone8,2" ]]; then
+                        ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 11.1 $1)"
+                    else
+                        ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 10.3.3 $1)"
+                    fi
+                elif [[ "$3" == "9."* ]]; then
+                    ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn $3 $1)"
+                else
+                    ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn $3 $1)"
+                fi
                 if [ -z $ivkey ]; then
                     kbag=$("$bin"/img4 -i $fn -b | head -n 1)
                     iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
@@ -866,6 +871,11 @@ _download_boot_files() {
                 ivkey="$iv$key"
                 "$bin"/img4 -i $fn -o "$dir"/$1/$cpid/$3/LLB.dec -k $ivkey
             fi
+        fi
+        if [[ "$3" == "10."* || "$3" == "9."* ]]; then
+            rm -rf BuildManifest.plist
+            ipswurl=$(curl -k -sL "https://api.ipsw.me/v4/device/$deviceid?type=ipsw" | "$bin"/jq '.firmwares | .[] | select(.version=="'$3'")' | "$bin"/jq -s '.[0] | .url' --raw-output)
+            "$bin"/pzb -g BuildManifest.plist "$ipswurl"
         fi
         if [ ! -e "$dir"/$1/$cpid/$3/sepi.dec ]; then
             "$bin"/pzb -g $(awk "/""$replace""/{x=1}x&&/sep-firmware[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1) "$ipswurl"
@@ -1097,11 +1107,7 @@ _download_boot_files() {
                     "$bin"/kairos "$dir"/$1/$cpid/$3/iBEC.dec "$dir"/$1/$cpid/$3/iBEC.patched -b "$boot_args rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e PE_i_can_has_debugger=1 amfi_get_out_of_my_way=1 amfi_allow_any_signature=1" -n
                 else
                     "$bin"/iBoot64Patcher "$dir"/$1/$cpid/$3/iBSS.dec "$dir"/$1/$cpid/$3/iBSS.patched
-                    if [[ "$3" == "10.3"* || "$3" == "11."* || "$3" == "12."* ||  "$3" == "13."* || "$3" == "14."* ]]; then
-                        "$bin"/iBoot64Patcher "$dir"/$1/$cpid/$3/iBEC.dec "$dir"/$1/$cpid/$3/iBEC.patched -b "$boot_args rd=disk0s1s8 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x100 PE_i_can_has_debugger=1 amfi_get_out_of_my_way=1 amfi_allow_any_signature=1" -n
-                    else
-                        "$bin"/iBoot64Patcher "$dir"/$1/$cpid/$3/iBEC.dec "$dir"/$1/$cpid/$3/iBEC.patched -b "$boot_args rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e PE_i_can_has_debugger=1 amfi_get_out_of_my_way=1 amfi_allow_any_signature=1" -n
-                    fi
+                    "$bin"/iBoot64Patcher "$dir"/$1/$cpid/$3/iBEC.dec "$dir"/$1/$cpid/$3/iBEC.patched -b "$boot_args rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e PE_i_can_has_debugger=1 amfi_get_out_of_my_way=1 amfi_allow_any_signature=1" -n
                 fi
             fi
         fi
@@ -1356,7 +1362,7 @@ _download_clean_boot_files() {
     if [ ! -e "$dir"/$1/clean/$cpid/$3/kernelcache ]; then
         if [[ "$3" == "10."* ]]; then
             if [[ "$deviceid" == "iPhone8,1" || "$deviceid" == "iPhone8,2" ]]; then
-                ipswurl=$(curl -k -sL "https://api.ipsw.me/v4/device/$deviceid?type=ipsw" | "$bin"/jq '.firmwares | .[] | select(.version=="'11.4.1'")' | "$bin"/jq -s '.[0] | .url' --raw-output)
+                ipswurl=$(curl -k -sL "https://api.ipsw.me/v4/device/$deviceid?type=ipsw" | "$bin"/jq '.firmwares | .[] | select(.version=="'11.1'")' | "$bin"/jq -s '.[0] | .url' --raw-output)
             else
                 ipswurl=$(curl -k -sL "https://api.ipsw.me/v4/device/$deviceid?type=ipsw" | "$bin"/jq '.firmwares | .[] | select(.version=="'10.3.3'")' | "$bin"/jq -s '.[0] | .url' --raw-output)
             fi
@@ -1368,7 +1374,7 @@ _download_clean_boot_files() {
             if [[ "$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e $3 $1)" == "true" ]]; then
                 if [[ "$3" == "10."* ]]; then
                     if [[ "$deviceid" == "iPhone8,1" || "$deviceid" == "iPhone8,2" ]]; then
-                        ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 11.4.1 $1)"
+                        ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 11.1 $1)"
                     else
                         ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 10.3.3 $1)"
                     fi
@@ -1390,7 +1396,7 @@ _download_clean_boot_files() {
             if [[ "$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e $3 $1)" == "true" ]]; then
                 if [[ "$3" == "10."* ]]; then
                     if [[ "$deviceid" == "iPhone8,1" || "$deviceid" == "iPhone8,2" ]]; then
-                        ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 11.4.1 $1)"
+                        ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 11.1 $1)"
                     else
                         ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn 10.3.3 $1)"
                     fi
@@ -1671,6 +1677,10 @@ _download_root_fs() {
             chmod 755 ./rdmount/usr/sbin/asr
             hdiutil detach rdmount
             "$bin"/img4 -i rdsk.dmg -o rdsk.im4p -A -T rdsk
+            # get build id from version
+            cd "$dir"/work
+            buildid="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -b $3 $1)"
+            cd "$dir"/$1/$cpid/$3/ipswcfw
             # illb
             illbpath="$(awk "/""${replace}""/{x=1}x&&/LLB[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
             cp "$dir"/$1/$cpid/$3/LLB.dec illb.dec
@@ -1687,7 +1697,11 @@ _download_root_fs() {
             ibotpath="$(awk "/""${replace}""/{x=1}x&&/iBoot[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
             cp "$dir"/$1/$cpid/$3/iBoot.dec ibot.dec
             if [[ "$3" == "9"* ]]; then
-                "$bin"/iBoot64Patcher ibot.dec ibot.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress" -n
+                "$bin"/kairos ibot.dec ibot2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
+                if [[ ! "$?" == "0" ]]; then
+                    "$bin"/iBoot64Patcher ibot.dec ibot2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
+                fi
+                "$bin"/iBoot64Patcher2 ibot2.patched ibot.patched -n
             else
                 "$bin"/iBoot64Patcher ibot.dec ibot.patched -n
             fi
@@ -1707,8 +1721,7 @@ _download_root_fs() {
             fi
             "$bin"/img4 -i ibss.patched -o ibss.im4p -A -T ibss
             "$bin"/img4 -i ibss.patched -o ibss.img4 -M IM4M -A -T ibss
-            cp ibss.img4 /tmp/futurerestore/ibss.n71map.14G60.patched.img4
-            cp ibss.img4 /tmp/futurerestore/ibss.n71map.13F69.patched.img4
+            cp ibss.img4 /tmp/futurerestore/ibss.$replace.$buildid.patched.img4
             # ibec
             ibecpath="$(awk "/""${replace}""/{x=1}x&&/iBEC[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
             cp "$dir"/$1/$cpid/$3/iBEC.dec ibec.dec
@@ -1723,8 +1736,7 @@ _download_root_fs() {
             fi
             "$bin"/img4 -i ibec.patched -o ibec.im4p -A -T ibec
             "$bin"/img4 -i ibec.patched -o ibec.img4 -M IM4M -A -T ibec
-            cp ibec.img4 /tmp/futurerestore/ibec.n71map.14G60.patched.img4
-            cp ibec.img4 /tmp/futurerestore/ibec.n71map.13F69.patched.img4
+            cp ibec.img4 "/tmp/futurerestore/ibec.$replace.$buildid.patched.img4"
             # dtre
             dtrepath="$(awk "/""${replace}""/{x=1}x&&/DeviceTree[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
             if [[ "$3" == "10."* || "$3" == "11."* || "$3" == "12."* || "$3" == "13."* || "$3" == "14."* ]]; then
@@ -3766,13 +3778,8 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt4/AppleInternal.tar'
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt5/mobile/Library/Caches/com.apple.MobileGestalt.plist'
                 fi
-                if [[ "$r" == "16."* || "$r" == "17."* ]]; then
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/Undecimus.app_disk0s1s9.tar.gz root@localhost:/mnt4/
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar -xzvf /mnt4/Undecimus.app_disk0s1s9.tar.gz -C /mnt4/Applications/"
-                else
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/Undecimus.app_disk0s1s8.tar.gz root@localhost:/mnt4/
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar -xzvf /mnt4/Undecimus.app_disk0s1s8.tar.gz -C /mnt4/Applications/"
-                fi
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/Undecimus.app_disk0s1s1.tar.gz root@localhost:/mnt4/
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar -xzvf /mnt4/Undecimus.app_disk0s1s1.tar.gz -C /mnt4/Applications/"
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt4/Applications/Undecimus.app'
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/System/Library/DataClassMigrators/SystemAppMigrator.migrator/"
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv -v /mnt5/staged_system_apps/* /mnt4/Applications"
@@ -3833,13 +3840,8 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt4/AppleInternal.tar'
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt5/mobile/Library/Caches/com.apple.MobileGestalt.plist'
                 fi
-                if [[ "$r" == "16."* || "$r" == "17."* ]]; then
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/Undecimus.app_disk0s1s9.tar.gz root@localhost:/mnt4/
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar -xzvf /mnt4/Undecimus.app_disk0s1s9.tar.gz -C /mnt4/Applications/"
-                else
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/Undecimus.app_disk0s1s8.tar.gz root@localhost:/mnt4/
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar -xzvf /mnt4/Undecimus.app_disk0s1s8.tar.gz -C /mnt4/Applications/"
-                fi
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/Undecimus.app_disk0s1s1.tar.gz root@localhost:/mnt4/
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar -xzvf /mnt4/Undecimus.app_disk0s1s1.tar.gz -C /mnt4/Applications/"
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/System/Library/DataClassMigrators/SystemAppMigrator.migrator/"
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv -v /mnt5/staged_system_apps/* /mnt4/Applications"
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.Collection.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.Collection.plist
