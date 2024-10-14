@@ -1,6 +1,7 @@
 python-3.7.6-macosx10.6.pkg
 dump.raw
 dumped.shsh
+*.aria2
 cctools-927.0.2.tar.gz
 libssl-dev_1.1.1f-1ubuntu2.22_amd64.deb
 libssl1.1_1.1.1f-1ubuntu2.22_amd64.deb

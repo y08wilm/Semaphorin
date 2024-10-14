@@ -1626,421 +1626,192 @@ _download_root_fs() {
     rm -rf "$dir"/$1/$cpid/$3/ipswcfw
     mkdir -p "$dir"/$1/$cpid/$3/ipswcfw
     if [ ! -e "$dir"/$1/$cpid/$3/ipswcfw.ipsw ]; then
-        if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* || "$3" == "10."* || "$3" == "11."* || "$3" == "12."* || "$3" == "13."* || "$3" == "14."* ]]; then
-            local fn
-            "$bin"/pzb -g BuildManifest.plist "$ipswurl"
-            if [ "$os" = "Darwin" ]; then
-                fn="$(/usr/bin/plutil -extract "BuildIdentities".0."Manifest"."OS"."Info"."Path" xml1 -o - BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)"
-            else
-                fn="$("$bin"/PlistBuddy -c "Print BuildIdentities:0:Manifest:OS:Info:Path" BuildManifest.plist | tr -d '"')"
-            fi
-            ipswfn=$(echo ${ipswurl##*/})
-            cd "$dir"/$1/$cpid/$3/
-            if [ ! -e $ipswfn ]; then
-                "$bin"/aria2c --file-allocation=none $ipswurl
-            fi
-            cp $(find . -name '*.ipsw*') "$dir"/$1/$cpid/$3/ipswcfw
-            cd "$dir"/$1/$cpid/$3/ipswcfw
-            "$bin"/7z x $(find . -name '*.ipsw*')
-            if [[ "$3" == "10.3"* || "$3" == "11."* || "$3" == "12."* || "$3" == "13."* || "$3" == "14."* ]]; then
-                if [ ! -e "$dir"/$1/$cpid/$3/OS.dmg ]; then
-                    if [ "$os" = "Darwin" ]; then
-                        asr -source $fn -target "$dir"/$1/$cpid/$3/OS.dmg --embed -erase -noprompt --chunkchecksum --puppetstrings
-                    else
-                        cp $fn "$dir"/$1/$cpid/$3/OS.dmg
-                    fi
-                    if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
-                    "$bin"/irecovery -f /dev/null
-                    fi
+        local fn
+        "$bin"/pzb -g BuildManifest.plist "$ipswurl"
+        if [ "$os" = "Darwin" ]; then
+            fn="$(/usr/bin/plutil -extract "BuildIdentities".0."Manifest"."OS"."Info"."Path" xml1 -o - BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)"
+        else
+            fn="$("$bin"/PlistBuddy -c "Print BuildIdentities:0:Manifest:OS:Info:Path" BuildManifest.plist | tr -d '"')"
+        fi
+        ipswfn=$(echo ${ipswurl##*/})
+        cd "$dir"/$1/$cpid/$3/
+        if [ ! -e $ipswfn ]; then
+            "$bin"/aria2c --file-allocation=none $ipswurl
+        fi
+        cp $(find . -name '*.ipsw*') "$dir"/$1/$cpid/$3/ipswcfw
+        cd "$dir"/$1/$cpid/$3/ipswcfw
+        "$bin"/7z x $(find . -name '*.ipsw*')
+        if [[ "$3" == "10.3"* || "$3" == "11."* || "$3" == "12."* || "$3" == "13."* || "$3" == "14."* ]]; then
+            if [ ! -e "$dir"/$1/$cpid/$3/OS.dmg ]; then
+                if [ "$os" = "Darwin" ]; then
+                    asr -source $fn -target "$dir"/$1/$cpid/$3/OS.dmg --embed -erase -noprompt --chunkchecksum --puppetstrings
+                else
+                    cp $fn "$dir"/$1/$cpid/$3/OS.dmg
+                fi
+                if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
+                "$bin"/irecovery -f /dev/null
                 fi
             fi
-            mkdir work
-            "$bin"/img4tool -e -s "$dir"/$1/0.0/shsh.shsh2 -m IM4M
-            # rdsk
-            rdskpath=$(plutil -extract "BuildIdentities".0."Manifest"."RestoreRamDisk"."Info"."Path" xml1 -o - BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)
-            cp "$dir"/$1/$cpid/$3/RestoreRamDisk.dmg rdsk.dmg
-            mkdir rdmount
-            current_size=$(stat -f %z rdsk.dmg)
-            hdiutil resize -size "$((current_size + 10000000))" rdsk.dmg # 10MB more
-            hdiutil attach -mountpoint rdmount rdsk.dmg
-            "$bin"/restored_external64patcher ./rdmount/usr/local/bin/restored_external ./work/restored_external.patched
-            "$bin"/ldid -e ./rdmount/usr/local/bin/restored_external > ./work/restored_external.xml
-            "$bin"/ldid -S./work/restored_external.xml ./work/restored_external.patched
-            cp -av ./work/restored_external.patched ./rdmount/usr/local/bin/restored_external
-            chmod +x ./rdmount/usr/local/bin/restored_external
-            chmod 755 ./rdmount/usr/local/bin/restored_external
-            "$bin"/asr64_patcher ./rdmount/usr/sbin/asr ./work/asr.patched
-            "$bin"/ldid -e ./rdmount/usr/sbin/asr > ./work/asr.xml
-            "$bin"/ldid -S./work/asr.xml ./work/asr.patched
-            cp -av ./work/asr.patched ./rdmount/usr/sbin/asr
-            chmod +x ./rdmount/usr/sbin/asr
-            chmod 755 ./rdmount/usr/sbin/asr
-            hdiutil detach rdmount
-            "$bin"/img4 -i rdsk.dmg -o rdsk.im4p -A -T rdsk
-            # get build id from version
-            cd "$dir"/work
-            buildid="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -b $3 $1)"
-            cd "$dir"/$1/$cpid/$3/ipswcfw
-            # illb
-            illbpath="$(awk "/""${replace}""/{x=1}x&&/LLB[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
-            cp "$dir"/$1/$cpid/$3/LLB.dec illb.dec
-            if [[ "$3" == "9"* ]]; then
-                "$bin"/kairos illb.dec illb.patched
-                if [[ ! "$?" == "0" ]]; then
-                    "$bin"/iBoot64Patcher illb.dec illb.patched
-                fi
-            else
+        fi
+        mkdir work
+        "$bin"/img4tool -e -s "$dir"/$1/0.0/shsh.shsh2 -m IM4M
+        # rdsk
+        rdskpath=$(plutil -extract "BuildIdentities".0."Manifest"."RestoreRamDisk"."Info"."Path" xml1 -o - BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)
+        cp "$dir"/$1/$cpid/$3/RestoreRamDisk.dmg rdsk.dmg
+        mkdir rdmount
+        current_size=$(stat -f %z rdsk.dmg)
+        hdiutil resize -size "$((current_size + 10000000))" rdsk.dmg # 10MB more
+        hdiutil attach -mountpoint rdmount rdsk.dmg
+        "$bin"/restored_external64patcher ./rdmount/usr/local/bin/restored_external ./work/restored_external.patched
+        "$bin"/ldid -e ./rdmount/usr/local/bin/restored_external > ./work/restored_external.xml
+        "$bin"/ldid -S./work/restored_external.xml ./work/restored_external.patched
+        cp -av ./work/restored_external.patched ./rdmount/usr/local/bin/restored_external
+        chmod +x ./rdmount/usr/local/bin/restored_external
+        chmod 755 ./rdmount/usr/local/bin/restored_external
+        "$bin"/asr64_patcher ./rdmount/usr/sbin/asr ./work/asr.patched
+        "$bin"/ldid -e ./rdmount/usr/sbin/asr > ./work/asr.xml
+        "$bin"/ldid -S./work/asr.xml ./work/asr.patched
+        cp -av ./work/asr.patched ./rdmount/usr/sbin/asr
+        chmod +x ./rdmount/usr/sbin/asr
+        chmod 755 ./rdmount/usr/sbin/asr
+        hdiutil detach rdmount
+        "$bin"/img4 -i rdsk.dmg -o rdsk.im4p -A -T rdsk
+        # get build id from version
+        cd "$dir"/work
+        buildid="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -b $3 $1)"
+        cd "$dir"/$1/$cpid/$3/ipswcfw
+        # illb
+        illbpath="$(awk "/""${replace}""/{x=1}x&&/LLB[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
+        cp "$dir"/$1/$cpid/$3/LLB.dec illb.dec
+        if [[ "$3" == "9"* ]]; then
+            "$bin"/kairos illb.dec illb.patched
+            if [[ ! "$?" == "0" ]]; then
                 "$bin"/iBoot64Patcher illb.dec illb.patched
             fi
-            "$bin"/img4 -i illb.patched -o illb.im4p -A -T illb
-            # ibot
-            ibotpath="$(awk "/""${replace}""/{x=1}x&&/iBoot[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
-            cp "$dir"/$1/$cpid/$3/iBoot.dec ibot.dec
-            if [[ "$3" == "9"* ]]; then
-                "$bin"/kairos ibot.dec ibot2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
-                if [[ ! "$?" == "0" ]]; then
-                    "$bin"/iBoot64Patcher ibot.dec ibot2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
-                fi
-                "$bin"/iBoot64Patcher2 ibot2.patched ibot.patched -n
-            else
-                "$bin"/iBoot64Patcher ibot.dec ibot.patched -n
+        else
+            "$bin"/iBoot64Patcher illb.dec illb.patched
+        fi
+        "$bin"/img4 -i illb.patched -o illb.im4p -A -T illb
+        # ibot
+        ibotpath="$(awk "/""${replace}""/{x=1}x&&/iBoot[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
+        cp "$dir"/$1/$cpid/$3/iBoot.dec ibot.dec
+        if [[ "$3" == "9"* ]]; then
+            "$bin"/kairos ibot.dec ibot2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
+            if [[ ! "$?" == "0" ]]; then
+                "$bin"/iBoot64Patcher ibot.dec ibot2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
             fi
-            "$bin"/img4 -i ibot.patched -o ibot.im4p -A -T ibot
-            rm -rf /tmp/futurerestore
-            mkdir -p /tmp/futurerestore
-            # ibss
-            ibsspath="$(awk "/""${replace}""/{x=1}x&&/iBSS[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
-            cp "$dir"/$1/$cpid/$3/iBSS.dec ibss.dec
-            if [[ "$3" == "9"* ]]; then
-                "$bin"/kairos ibss.dec ibss.patched
-                if [[ ! "$?" == "0" ]]; then
-                    "$bin"/iBoot64Patcher ibss.dec ibss.patched
-                fi
-            else
+            "$bin"/iBoot64Patcher2 ibot2.patched ibot.patched -n
+        else
+            "$bin"/iBoot64Patcher ibot.dec ibot.patched -n
+        fi
+        "$bin"/img4 -i ibot.patched -o ibot.im4p -A -T ibot
+        rm -rf /tmp/futurerestore
+        mkdir -p /tmp/futurerestore
+        # ibss
+        ibsspath="$(awk "/""${replace}""/{x=1}x&&/iBSS[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
+        cp "$dir"/$1/$cpid/$3/iBSS.dec ibss.dec
+        if [[ "$3" == "9"* ]]; then
+            "$bin"/kairos ibss.dec ibss.patched
+            if [[ ! "$?" == "0" ]]; then
                 "$bin"/iBoot64Patcher ibss.dec ibss.patched
             fi
-            "$bin"/img4 -i ibss.patched -o ibss.im4p -A -T ibss
-            "$bin"/img4 -i ibss.patched -o ibss.img4 -M IM4M -A -T ibss
-            cp ibss.img4 /tmp/futurerestore/ibss.$replace.$buildid.patched.img4
-            # ibec
-            ibecpath="$(awk "/""${replace}""/{x=1}x&&/iBEC[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
-            cp "$dir"/$1/$cpid/$3/iBEC.dec ibec.dec
-            if [[ "$3" == "9"* ]]; then
-                "$bin"/kairos ibec.dec ibec2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
-                if [[ ! "$?" == "0" ]]; then
-                    "$bin"/iBoot64Patcher ibec.dec ibec2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
-                fi
-                "$bin"/iBoot64Patcher2 ibec2.patched ibec.patched -n
-            else
-                "$bin"/iBoot64Patcher ibec.dec ibec.patched -n
-            fi
-            "$bin"/img4 -i ibec.patched -o ibec.im4p -A -T ibec
-            "$bin"/img4 -i ibec.patched -o ibec.img4 -M IM4M -A -T ibec
-            cp ibec.img4 "/tmp/futurerestore/ibec.$replace.$buildid.patched.img4"
-            # dtre
-            dtrepath="$(awk "/""${replace}""/{x=1}x&&/DeviceTree[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
-            if [[ "$3" == "10."* || "$3" == "11."* || "$3" == "12."* || "$3" == "13."* || "$3" == "14."* ]]; then
-                "$bin"/img4tool -e -o work/dtree.raw "$dir"/$1/$cpid/$3/DeviceTree.dec
-            else
-                cp "$dir"/$1/$cpid/$3/DeviceTree.dec work/dtree.raw
-            fi
-            "$bin"/dtree_patcher work/dtree.raw work/dtree2.raw -n
-            LC_ALL=C sed -i '' 's/content-protect/mineeek-protect/g' work/dtree2.raw
-            "$bin"/img4 -i work/dtree2.raw -o dtre.im4p -A -T dtre
-            # rkrn
-            rkrnpath="$(awk "/""${replace}""/{x=1}x&&/kernelcache.release/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
-            krnlpath="$(awk "/""${replace}""/{x=1}x&&/kernelcache.release/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
-            cp "$dir"/$1/$cpid/$3/kcache.raw work/kcache.raw
-            "$bin"/KPlooshFinder work/kcache.raw work/kcache1.raw
-            if [[ "$3" == "7."* ]]; then
-                "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 7 -f 7 -a
-            elif [[ "$3" == "8"* ]]; then
-                "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 8 -f 8
-            elif [[ "$3" == "9"* ]]; then
-                "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 9 -f 9
-            elif [[ "$3" == "10."* ]]; then
-                "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 10 -f 10 -q -a
-            elif [[ "$3" == "11"* ]]; then
-                "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 11 -f 11 -r
-            elif [[ "$3" == "12"* ]]; then
-                "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 12 -f 12 -r
-            elif [[ "$3" == "13"* ]]; then
-                "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 13 -f 13 -r
-            fi
-            "$bin"/kerneldiff work/kcache.raw work/kcache2.raw work/kc.bpatch
-            if [[ "$?" == "0" ]]; then
-                "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o rkrn.im4p -T rkrn -P work/kc.bpatch
-                "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o krnl.im4p -T krnl -P work/kc.bpatch
-                "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o rkrn.img4 -M IM4M -T rkrn -P work/kc.bpatch
-                "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o krnl.img4 -M IM4M -T krnl -P work/kc.bpatch
-            else
-                if [[ "$deviceid" == *'iPhone8'* ]] || [[ "$deviceid" == *'iPad6'* ]] || [[ "$deviceid" == *'iPad5'* ]]; then
-                    python3 -m pyimg4 im4p create -i work/kcache2.raw -o rkrn.im4p --extra "$dir"/$1/$cpid/$3/kpp.bin -f rkrn --lzss
-                    python3 -m pyimg4 im4p create -i work/kcache2.raw -o krnl.im4p --extra "$dir"/$1/$cpid/$3/kpp.bin -f krnl --lzss
-                else
-                    python3 -m pyimg4 im4p create -i work/kcache2.raw -o rkrn.im4p -f rkrn --lzss
-                    python3 -m pyimg4 im4p create -i work/kcache2.raw -o krnl.im4p -f krnl --lzss
-                fi
-                python3 -m pyimg4 img4 create -p rkrn.im4p -o rkrn.img4 -m IM4M
-                python3 -m pyimg4 img4 create -p krnl.im4p -o krnl.img4 -m IM4M
-            fi
-            rm -vf "$illbpath"
-            rm -vf "$ibotpath"
-            rm -vf "$dtrepath"
-            cp -av illb.im4p "$illbpath"
-            cp -av ibot.im4p "$ibotpath"
-            cp -av dtre.im4p "$dtrepath"
-            rm -rf "$dir"/$1/$cpid/$3/rdsk.im4p
-            rm -rf "$dir"/$1/$cpid/$3/dtre.im4p
-            rm -rf "$dir"/$1/$cpid/$3/rkrn.im4p
-            cp -av rdsk.im4p "$dir"/$1/$cpid/$3/rdsk.im4p
-            cp -av dtre.im4p "$dir"/$1/$cpid/$3/dtre.im4p
-            cp -av rkrn.im4p "$dir"/$1/$cpid/$3/rkrn.im4p
-            rm -rf rdmount
-            rm -rf work
-            rm -rf IM4M
-            rm -rf rdsk.*
-            rm -rf illb.*
-            rm -rf ibot.*
-            rm -rf ibot2.*
-            rm -rf ibss.*
-            rm -rf ibec.*
-            rm -rf ibec2.*
-            rm -rf dtre.*
-            rm -rf rkrn.*
-            rm -rf krnl.*
-            rm -rf *.ipsw
-            zip -0 -r "$dir"/$1/$cpid/$3/ipswcfw.ipsw *
-            echo "CFW created"
-            cd "$dir"/work
-            # test
-            _wait_for_dfu
-            sudo killall -STOP -c usbd
-            if [[ ! "$no_prompt_replug" == 1 ]]; then
-                read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
-                elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                    echo "[*] Ok no problem, continuing.."
-                else
-                    echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
-                fi
-            fi
-            if [[ "$3" == "10."* || "$3" == "11.0" ]]; then
-                rdversion="10.3.3"
-            elif [[ "$deviceid" == "iPhone8,1" && "$3" == "11.0" ]]; then
-                rdversion="10.3.3"
-            elif [[ "$3" == "7."* || "$3" == "8."* ]]; then
-                rdversion="8.4.1"
-            elif [[ "$os" = "Darwin" && ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$3" == "9."* ]]; then
-                rdversion="9.3"
-            else
-                rdversion="$3"
-            fi
-            _download_ramdisk_boot_files $1 $2 $rdversion
-            cd "$dir"/$deviceid/$cpid/ramdisk/$rdversion
-            if [[ "$pongo" == 1 ]]; then
-                hit2=1
-                pongo=0
-            fi
-            if [[ "$cpid" == "0x8001" || "$cpid" == "0x8000" || "$cpid" == "0x8003" ]]; then
-                kbag="24A0F3547373C6FED863FC0F321D7FEA216D0258B48413903939DF968CC2C0E571949EFB72DED8B55B8670932CA7A039"
-                iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
-                key=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ' ' -f 4)
-                ivkey="$iv$key"
-                pwd
-                echo "$ivkey"
-            fi
-            if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
-                "$bin"/ipwnder -p
-                sleep 1
-                "$bin"/gaster reset
-            else
-                "$bin"/gaster pwn
-                "$bin"/gaster reset
-            fi
-            "$bin"/irecovery -f iBSS.img4
-            sleep 1
-            "$bin"/irecovery -f iBEC.img4
-            sleep 2
-            if [ "$check" = '0x8010' ] || [ "$check" = '0x8015' ] || [ "$check" = '0x8011' ] || [ "$check" = '0x8012' ]; then
-                sleep 1
-                "$bin"/irecovery -c go
-                sleep 2
-            else
-                sleep 1
-            fi
-            if [[ "$hit2" == 1 ]]; then
-                hit2=0
-                pongo=1
-            fi
-            cd "$dir"/
-            echo "Current nonce"
-            "$bin"/irecovery -q | grep NONC
-            generator=$(cat "$dir"/$1/0.0/shsh.shsh2 | grep "0x" | tail -n 1 | cut -d '>' -f 2 | cut -d '<' -f 1)
-            echo "Setting nonce to $generator"
-            "$bin"/irecovery -c "setenv com.apple.System.boot-nonce $generator"
-            sleep 1
-            "$bin"/irecovery -c "saveenv"
-            sleep 1
-            "$bin"/irecovery -c "setenv auto-boot false"
-            sleep 1
-            "$bin"/irecovery -c "saveenv"
-            sleep 1
-            "$bin"/irecovery -c "reset"
-            echo "Waiting for device to restart into recovery mode"
-            sleep 7
-            echo "New nonce"
-            "$bin"/irecovery -q | grep NONC
-            echo "[*] The device should now boot into recovery mode"
-            echo "[*] Please follow the on screen instructions to put your device back into dfu mode"
-            sleep 5
-            if [ "$os" = "Darwin" ]; then
-                if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                    if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                        sleep 10
-                        if [ "$(get_device_mode)" = "recovery" ]; then
-                            "$bin"/dfuhelper.sh
-                        else
-                            "$bin"/dfuhelper4.sh
-                            sleep 5
-                            "$bin"/irecovery -c "setenv auto-boot false"
-                            "$bin"/irecovery -c "saveenv"
-                            "$bin"/dfuhelper.sh
-                        fi
-                    elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                        "$bin"/dfuhelper2.sh
-                    else
-                        "$bin"/dfuhelper3.sh
-                    fi
-                fi
-            else
-                if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                    if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                        sleep 10
-                        if [ "$(get_device_mode)" = "recovery" ]; then
-                            "$bin"/dfuhelper.sh
-                        else
-                            "$bin"/dfuhelper4.sh
-                            sleep 5
-                            "$bin"/irecovery -c "setenv auto-boot false"
-                            "$bin"/irecovery -c "saveenv"
-                            "$bin"/dfuhelper.sh
-                        fi
-                    elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                        "$bin"/dfuhelper2.sh
-                    else
-                        "$bin"/dfuhelper3.sh
-                    fi
-                fi
-            fi
-            _wait_for_dfu
-            sudo killall -STOP -c usbd
-            if [[ ! "$no_prompt_replug" == 1 ]]; then
-                read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
-                elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                    echo "[*] Ok no problem, continuing.."
-                else
-                    echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
-                fi
-            fi
-            if [[ "$cpid" == "0x8001" || "$cpid" == "0x8000" || "$cpid" == "0x8003" ]]; then
-                kbag="24A0F3547373C6FED863FC0F321D7FEA216D0258B48413903939DF968CC2C0E571949EFB72DED8B55B8670932CA7A039"
-                iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
-                key=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ' ' -f 4)
-                ivkey="$iv$key"
-                pwd
-                echo "$ivkey"
-            fi
-            if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
-                "$bin"/ipwnder -p
-                sleep 1
-                "$bin"/gaster reset
-            else
-                "$bin"/gaster pwn
-                "$bin"/gaster reset
-            fi
-            "$bin"/futurerestore -t "$dir"/$1/0.0/shsh.shsh2 --use-pwndfu --skip-blob --serial --rdsk "$dir"/$1/$cpid/$3/rdsk.im4p --rkrn "$dir"/$1/$cpid/$3/rkrn.im4p --latest-sep --latest-baseband "$dir"/$1/$cpid/$3/ipswcfw.ipsw
-            rm -rf "$dir"/$1/$cpid/$3/ipswcfw*
+        else
+            "$bin"/iBoot64Patcher ibss.dec ibss.patched
         fi
-    fi
-    if [[ "$3" == "10.3"* || "$3" == "11."* || "$3" == "12."* || "$3" == "13."* || "$3" == "14."* ]]; then
-        rm -rf BuildManifest.plist
-    else
-        if [ ! -e "$dir"/$1/$cpid/$3/rw.dmg ]; then
-            if [ ! -e "$dir"/$1/$cpid/$3/OS.dmg ]; then
-                if [[ "$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e $3 $1)" == "true" ]]; then
-                    local fn
-                    "$bin"/pzb -g BuildManifest.plist "$ipswurl"
-                    if [ "$os" = "Darwin" ]; then
-                        fn="$(/usr/bin/plutil -extract "BuildIdentities".0."Manifest"."OS"."Info"."Path" xml1 -o - BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)"
-                    else
-                        fn="$("$bin"/PlistBuddy -c "Print BuildIdentities:0:Manifest:OS:Info:Path" BuildManifest.plist | tr -d '"')"
-                    fi
-                    "$bin"/pzb -g "$fn" "$ipswurl"
-                    ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn $3 $1)"
-                    "$bin"/dmg extract $fn "$dir"/$1/$cpid/$3/OS.dmg -k $ivkey
-                else
-                    local fno
-                    local fnr
-                    "$bin"/pzb -g BuildManifest.plist "$ipswurl"
-                    if [ "$os" = "Darwin" ]; then
-                        fno="$(/usr/bin/plutil -extract "BuildIdentities".0."Manifest"."OS"."Info"."Path" xml1 -o - BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)"
-                        fnr="$(/usr/bin/plutil -extract "BuildIdentities".0."Manifest"."RestoreRamDisk"."Info"."Path" xml1 -o - BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)"
-                    else
-                        fno="$("$bin"/PlistBuddy -c "Print BuildIdentities:0:Manifest:OS:Info:Path" BuildManifest.plist | tr -d '"')"
-                        fnr="$("$bin"/PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist | tr -d '"')"
-                    fi
-                    "$bin"/pzb -g "$fno" "$ipswurl"
-                    if [ ! -e "$dir"/$1/$cpid/$3/RestoreRamDisk.dmg ]; then
-                        "$bin"/pzb -g "$fnr" "$ipswurl"
-                        if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* ]]; then
-                            fn="$fnr"
-                            if [[ "$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e $3 $1)" == "true" ]]; then
-                                ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn $3 $1)"
-                                "$bin"/img4 -i $fn -o "$dir"/$1/$cpid/$3/RestoreRamDisk.dmg -k $ivkey
-                            else
-                                kbag=$("$bin"/img4 -i $fn -b | head -n 1)
-                                iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
-                                key=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ' ' -f 4)
-                                ivkey="$iv$key"
-                                "$bin"/img4 -i $fn -o "$dir"/$1/$cpid/$3/RestoreRamDisk.dmg -k $ivkey
-                            fi
-                        else
-                            "$bin"/img4 -i "$fnr" -o "$dir"/$1/$cpid/$3/RestoreRamDisk.dmg
-                        fi
-                    fi
-                    fn="$fno"
-                    ivkey=$("$bin"/pass2key $scid "$dir"/$1/$cpid/$3/RestoreRamDisk.dmg $fn | tail -n 1 | cut -d ' ' -f 3)
-                    "$bin"/dmg extract $fn "$dir"/$1/$cpid/$3/OS.dmg -k $ivkey
-                fi
+        "$bin"/img4 -i ibss.patched -o ibss.im4p -A -T ibss
+        "$bin"/img4 -i ibss.patched -o ibss.img4 -M IM4M -A -T ibss
+        cp ibss.img4 /tmp/futurerestore/ibss.$replace.$buildid.patched.img4
+        # ibec
+        ibecpath="$(awk "/""${replace}""/{x=1}x&&/iBEC[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
+        cp "$dir"/$1/$cpid/$3/iBEC.dec ibec.dec
+        if [[ "$3" == "9"* ]]; then
+            "$bin"/kairos ibec.dec ibec2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
+            if [[ ! "$?" == "0" ]]; then
+                "$bin"/iBoot64Patcher ibec.dec ibec2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
             fi
-            if [ ! -e "$dir"/$1/$cpid/$3/rw.dmg ]; then
-                "$bin"/dmg build "$dir"/$1/$cpid/$3/OS.dmg "$dir"/$1/$cpid/$3/rw.dmg
-            fi
-            if [ "$os" = "Darwin" ]; then
-                hdiutil attach -mountpoint /tmp/ios "$dir"/$1/$cpid/$3/rw.dmg
-                sudo diskutil enableOwnership /tmp/ios
-                sudo "$bin"/gnutar -cvf "$dir"/$1/$cpid/$3/OS.tar -C /tmp/ios .
-                hdiutil detach /tmp/ios
-            fi
-            rm -rf /tmp/ios
-            if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
-            "$bin"/irecovery -f /dev/null
-            fi
+            "$bin"/iBoot64Patcher2 ibec2.patched ibec.patched -n
+        else
+            "$bin"/iBoot64Patcher ibec.dec ibec.patched -n
         fi
+        "$bin"/img4 -i ibec.patched -o ibec.im4p -A -T ibec
+        "$bin"/img4 -i ibec.patched -o ibec.img4 -M IM4M -A -T ibec
+        cp ibec.img4 "/tmp/futurerestore/ibec.$replace.$buildid.patched.img4"
+        # dtre
+        dtrepath="$(awk "/""${replace}""/{x=1}x&&/DeviceTree[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
+        if [[ "$3" == "10."* || "$3" == "11."* || "$3" == "12."* || "$3" == "13."* || "$3" == "14."* ]]; then
+            "$bin"/img4tool -e -o work/dtree.raw "$dir"/$1/$cpid/$3/DeviceTree.dec
+        else
+            cp "$dir"/$1/$cpid/$3/DeviceTree.dec work/dtree.raw
+        fi
+        "$bin"/dtree_patcher work/dtree.raw work/dtree2.raw -n
+        LC_ALL=C sed -i '' 's/content-protect/mineeek-protect/g' work/dtree2.raw
+        "$bin"/img4 -i work/dtree2.raw -o dtre.im4p -A -T dtre
+        # rkrn
+        rkrnpath="$(awk "/""${replace}""/{x=1}x&&/kernelcache.release/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
+        krnlpath="$(awk "/""${replace}""/{x=1}x&&/kernelcache.release/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
+        cp "$dir"/$1/$cpid/$3/kcache.raw work/kcache.raw
+        "$bin"/KPlooshFinder work/kcache.raw work/kcache1.raw
+        if [[ "$3" == "7."* ]]; then
+            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 7 -f 7 -a
+        elif [[ "$3" == "8"* ]]; then
+            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 8 -f 8
+        elif [[ "$3" == "9"* ]]; then
+            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 9 -f 9
+        elif [[ "$3" == "10."* ]]; then
+            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 10 -f 10 -q -a
+        elif [[ "$3" == "11"* ]]; then
+            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 11 -f 11 -r
+        elif [[ "$3" == "12"* ]]; then
+            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 12 -f 12 -r
+        elif [[ "$3" == "13"* ]]; then
+            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 13 -f 13 -r
+        fi
+        "$bin"/kerneldiff work/kcache.raw work/kcache2.raw work/kc.bpatch
+        if [[ "$?" == "0" ]]; then
+            "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o rkrn.im4p -T rkrn -P work/kc.bpatch
+            "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o krnl.im4p -T krnl -P work/kc.bpatch
+            "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o rkrn.img4 -M IM4M -T rkrn -P work/kc.bpatch
+            "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o krnl.img4 -M IM4M -T krnl -P work/kc.bpatch
+        else
+            if [[ "$deviceid" == *'iPhone8'* ]] || [[ "$deviceid" == *'iPad6'* ]] || [[ "$deviceid" == *'iPad5'* ]]; then
+                python3 -m pyimg4 im4p create -i work/kcache2.raw -o rkrn.im4p --extra "$dir"/$1/$cpid/$3/kpp.bin -f rkrn --lzss
+                python3 -m pyimg4 im4p create -i work/kcache2.raw -o krnl.im4p --extra "$dir"/$1/$cpid/$3/kpp.bin -f krnl --lzss
+            else
+                python3 -m pyimg4 im4p create -i work/kcache2.raw -o rkrn.im4p -f rkrn --lzss
+                python3 -m pyimg4 im4p create -i work/kcache2.raw -o krnl.im4p -f krnl --lzss
+            fi
+            python3 -m pyimg4 img4 create -p rkrn.im4p -o rkrn.img4 -m IM4M
+            python3 -m pyimg4 img4 create -p krnl.im4p -o krnl.img4 -m IM4M
+        fi
+        rm -vf "$illbpath"
+        rm -vf "$ibotpath"
+        rm -vf "$dtrepath"
+        cp -av illb.im4p "$illbpath"
+        cp -av ibot.im4p "$ibotpath"
+        cp -av dtre.im4p "$dtrepath"
+        rm -rf "$dir"/$1/$cpid/$3/rdsk.im4p
+        rm -rf "$dir"/$1/$cpid/$3/dtre.im4p
+        rm -rf "$dir"/$1/$cpid/$3/rkrn.im4p
+        cp -av rdsk.im4p "$dir"/$1/$cpid/$3/rdsk.im4p
+        cp -av dtre.im4p "$dir"/$1/$cpid/$3/dtre.im4p
+        cp -av rkrn.im4p "$dir"/$1/$cpid/$3/rkrn.im4p
+        rm -rf rdmount
+        rm -rf work
+        rm -rf IM4M
+        rm -rf rdsk.*
+        rm -rf illb.*
+        rm -rf ibot.*
+        rm -rf ibot2.*
+        rm -rf ibss.*
+        rm -rf ibec.*
+        rm -rf ibec2.*
+        rm -rf dtre.*
+        rm -rf rkrn.*
+        rm -rf krnl.*
+        rm -rf *.ipsw
+        zip -0 -r "$dir"/$1/$cpid/$3/ipswcfw.ipsw *
+        echo "CFW created"
+        cd "$dir"/work
     fi
     cd ..
     rm -rf work
@@ -2181,6 +1952,9 @@ fi
 sudo killall -STOP -c usbd
 if [[ "$(get_device_mode)" == "normal" ]]; then
     "$bin"/reboot_into_recovery.sh
+fi 
+if [[ "$(get_device_mode)" == "dfu" ]]; then
+    "$bin"/dfuhelper3.sh
 fi 
 if [[ "$(get_device_mode)" == "none" ]]; then
     echo "[-] Please connect a device in recovery mode or dfu mode to continue"
@@ -2373,43 +2147,14 @@ if [[ "$boot" == 1 ]]; then
         echo "[*] We will try to boot iOS/iPadOS $version on your device"
         echo "[*] You can enable auto-boot again at any time by running $0 $version --fix-auto-boot"
         sleep 5
+        "$bin"/dfuhelper3.sh
         if [ "$os" = "Darwin" ]; then
             if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                    sleep 10
-                    if [ "$(get_device_mode)" = "recovery" ]; then
-                        "$bin"/dfuhelper.sh
-                    else
-                        "$bin"/dfuhelper4.sh
-                        sleep 5
-                        "$bin"/irecovery -c "setenv auto-boot false"
-                        "$bin"/irecovery -c "saveenv"
-                        "$bin"/dfuhelper.sh
-                    fi
-                elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                    "$bin"/dfuhelper2.sh
-                else
-                    "$bin"/dfuhelper3.sh
-                fi
+                "$bin"/dfuhelper3.sh
             fi
         else
             if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                    sleep 10
-                    if [ "$(get_device_mode)" = "recovery" ]; then
-                        "$bin"/dfuhelper.sh
-                    else
-                        "$bin"/dfuhelper4.sh
-                        sleep 5
-                        "$bin"/irecovery -c "setenv auto-boot false"
-                        "$bin"/irecovery -c "saveenv"
-                        "$bin"/dfuhelper.sh
-                    fi
-                elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                    "$bin"/dfuhelper2.sh
-                else
-                    "$bin"/dfuhelper3.sh
-                fi
+                "$bin"/dfuhelper3.sh
             fi
         fi
         _wait_for_dfu
@@ -2452,43 +2197,14 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         fi
         _download_ramdisk_boot_files $deviceid $replace $rdversion
         sleep 1
+        "$bin"/dfuhelper3.sh
         if [ "$os" = "Darwin" ]; then
             if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                    sleep 10
-                    if [ "$(get_device_mode)" = "recovery" ]; then
-                        "$bin"/dfuhelper.sh
-                    else
-                        "$bin"/dfuhelper4.sh
-                        sleep 5
-                        "$bin"/irecovery -c "setenv auto-boot false"
-                        "$bin"/irecovery -c "saveenv"
-                        "$bin"/dfuhelper.sh
-                    fi
-                elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                    "$bin"/dfuhelper2.sh
-                else
-                    "$bin"/dfuhelper3.sh
-                fi
+                "$bin"/dfuhelper3.sh
             fi
         else
             if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                    sleep 10
-                    if [ "$(get_device_mode)" = "recovery" ]; then
-                        "$bin"/dfuhelper.sh
-                    else
-                        "$bin"/dfuhelper4.sh
-                        sleep 5
-                        "$bin"/irecovery -c "setenv auto-boot false"
-                        "$bin"/irecovery -c "saveenv"
-                        "$bin"/dfuhelper.sh
-                    fi
-                elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                    "$bin"/dfuhelper2.sh
-                else
-                    "$bin"/dfuhelper3.sh
-                fi
+                "$bin"/dfuhelper3.sh
             fi
         fi
         _wait_for_dfu
@@ -2565,43 +2281,14 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         fi
         echo "[*] Waiting for device in DFU mode"
         sleep 1
+        "$bin"/dfuhelper3.sh
         if [ "$os" = "Darwin" ]; then
             if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                    sleep 10
-                    if [ "$(get_device_mode)" = "recovery" ]; then
-                        "$bin"/dfuhelper.sh
-                    else
-                        "$bin"/dfuhelper4.sh
-                        sleep 5
-                        "$bin"/irecovery -c "setenv auto-boot false"
-                        "$bin"/irecovery -c "saveenv"
-                        "$bin"/dfuhelper.sh
-                    fi
-                elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                    "$bin"/dfuhelper2.sh
-                else
-                    "$bin"/dfuhelper3.sh
-                fi
+                "$bin"/dfuhelper3.sh
             fi
         else
             if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                    sleep 10
-                    if [ "$(get_device_mode)" = "recovery" ]; then
-                        "$bin"/dfuhelper.sh
-                    else
-                        "$bin"/dfuhelper4.sh
-                        sleep 5
-                        "$bin"/irecovery -c "setenv auto-boot false"
-                        "$bin"/irecovery -c "saveenv"
-                        "$bin"/dfuhelper.sh
-                    fi
-                elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                    "$bin"/dfuhelper2.sh
-                else
-                    "$bin"/dfuhelper3.sh
-                fi
+                "$bin"/dfuhelper3.sh
             fi
         fi
         _wait_for_dfu
@@ -2654,59 +2341,6 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         fi
     fi
     wd="$(pwd)"
-    if [[ -e "$dir"/$deviceid/0.0/apticket.der && -e "$dir"/$deviceid/0.0/sep-firmware.img4 && -e "$dir"/$deviceid/0.0/keybags ]]; then
-        if [[ "$cpid" == "0x8000" || "$cpid" == "0x8001" || "$cpid" == "0x8003" ]]; then
-            if [[ "$pongo" == 1 ]]; then
-                _download_ramdisk_boot_files $deviceid $replace 14.3
-                pongo=0
-                r="14.3"
-                fuck=1
-            fi
-        fi
-    fi
-    cd "$wd"
-    if [[ "$ramdisk" == 1 || "$dump_blobs" == 1 || "$dump_nand" == 1 || "$restore_activation" == 1 || "$restore_nand" == 1 || "$restore_mnt1" == 1 || "$restore_mnt2" == 1 || "$disable_NoMoreSIGABRT" == 1 || "$NoMoreSIGABRT" == 1 ]]; then
-        if [[ "$version" == "16."* || "$version" == "17."* ]]; then
-            pongo=1
-        fi
-    fi
-    _boot_ramdisk $deviceid $replace $r
-    if [[ "$hit2" == 1 ]]; then
-        hit2=0
-        pongo=1
-    fi
-    if [[ -e "$dir"/$deviceid/0.0/apticket.der && -e "$dir"/$deviceid/0.0/sep-firmware.img4 && -e "$dir"/$deviceid/0.0/keybags ]]; then
-        if [[ "$cpid" == "0x8000" || "$cpid" == "0x8001" || "$cpid" == "0x8003" ]]; then
-            if [[ "$pongo" == 1 ]]; then
-                _download_ramdisk_boot_files $deviceid $replace 14.3
-                pongo=0
-                r="14.3"
-                fuck=1
-            fi
-        fi
-    fi
-    cd "$dir"/
-    read -p "[*] Press Enter once your device has fully booted into the SSH ramdisk " r1
-    echo "[*] Waiting 6 seconds before continuing.."
-    sleep 6
-    sudo killall -STOP -c usbd
-    if [[ ! "$no_prompt_replug" == 1 ]]; then
-        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-            echo "[*] Waiting 10 seconds before continuing.."
-            sleep 10
-        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-            echo "[*] Ok no problem, continuing.."
-        else
-            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-            echo "[*] Waiting 10 seconds before continuing.."
-            sleep 10
-        fi
-    fi
-    "$bin"/iproxy 2222 22 &
-    sleep 2
     if [[ "$restore" == 1 ]]; then
         if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram auto-boot=false" 2> /dev/null
@@ -2824,6 +2458,14 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             echo "missing ./keybags, which is required in order to proceed. exiting.."
             exit 0
         fi
+        if [ ! -e "$dir"/$deviceid/0.0/shsh.shsh2 ]; then
+            echo "missing ./shsh.shsh2, which is required in order to proceed. exiting.."
+            exit 0
+        fi
+        if [ ! -e "$dir"/$deviceid/$cpid/$version/ipswcfw.ipsw ]; then
+            echo "missing ./ipswcfw.ipsw, which is required in order to proceed. exiting.."
+            exit 0
+        fi
         if [ ! -e "$dir"/$deviceid/0.0/activation_records/activation_record.plist ]; then
             read -p "missing ./activation_records/activation_record.plist, which is recommended in order to proceed. press enter to continue.. " r1
             force_activation=1
@@ -2836,1286 +2478,212 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 fuck=1
             fi
         fi
-        if [[ "$version" == "10.3"* || "$version" == "11."* || "$version" == "12."* || "$version" == "13."* || "$version" == "14."* ]]; then
-            if [[ "$hit" == 1 ]]; then
-                $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-                _kill_if_running iproxy
-                if [ "$os" = "Darwin" ]; then
-                    if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                        if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                            sleep 10
-                            if [ "$(get_device_mode)" = "recovery" ]; then
-                                "$bin"/dfuhelper.sh
-                            else
-                                "$bin"/dfuhelper4.sh
-                                sleep 5
-                                "$bin"/irecovery -c "setenv auto-boot false"
-                                "$bin"/irecovery -c "saveenv"
-                                "$bin"/dfuhelper.sh
-                            fi
-                        elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                            "$bin"/dfuhelper2.sh
-                        else
-                            "$bin"/dfuhelper3.sh
-                        fi
-                    fi
-                else
-                    if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                        if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                            sleep 10
-                            if [ "$(get_device_mode)" = "recovery" ]; then
-                                "$bin"/dfuhelper.sh
-                            else
-                                "$bin"/dfuhelper4.sh
-                                sleep 5
-                                "$bin"/irecovery -c "setenv auto-boot false"
-                                "$bin"/irecovery -c "saveenv"
-                                "$bin"/dfuhelper.sh
-                            fi
-                        elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                            "$bin"/dfuhelper2.sh
-                        else
-                            "$bin"/dfuhelper3.sh
-                        fi
-                    fi
-                fi
-                _wait_for_dfu
-                sudo killall -STOP -c usbd
-                if [[ ! "$no_prompt_replug" == 1 ]]; then
-                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                        echo "[*] Ok no problem, continuing.."
-                    else
-                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    fi
-                fi
-                if [[ "$version" == "7."* || "$version" == "8."* ]]; then
-                    if [ "$os" = "Darwin" ]; then
-                        cd "$dir"/$deviceid/$cpid/ramdisk/8.4.1
-                    else
-                        cd "$dir"/$deviceid/$cpid/ramdisk/11.4
-                    fi
-                elif [[ "$version" == "10.3"* ]]; then
-                    cd "$dir"/$deviceid/$cpid/ramdisk/10.3.3
-                elif [[ "$deviceid" == "iPhone8,1" && "$version" == "11.0" ]]; then
-                    cd "$dir"/$deviceid/$cpid/ramdisk/10.3.3
-                elif [[ "$version" == "11."* || "$version" == "12."* || "$version" == "13."* || "$version" == "14."* ]]; then
-                    if [[ "$(./java/bin/java -jar ./Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e 14.3 $deviceid)" == "true" ]]; then
-                        cd "$dir"/$deviceid/$cpid/ramdisk/14.3
-                    elif [[ "$deviceid" == "iPad"* && ! "$deviceid" == "iPad4"* ]]; then
-                        cd "$dir"/$deviceid/$cpid/ramdisk/14.3
-                    else
-                        cd "$dir"/$deviceid/$cpid/ramdisk/12.5.4
-                    fi
-                elif [[ "$os" = "Darwin" && ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$version" == "9."* ]]; then
-                    cd "$dir"/$deviceid/$cpid/ramdisk/9.3
-                else
-                    cd "$dir"/$deviceid/$cpid/ramdisk/11.4
-                fi
-                if [[ "$pongo" == 1 ]]; then
-                    hit2=1
-                    pongo=0
-                fi
-                _boot_ramdisk $deviceid $replace $r
-                if [[ "$hit2" == 1 ]]; then
-                    hit2=0
-                    pongo=1
-                fi
-                cd "$dir"/
-                read -p "[*] Press Enter once your device has fully booted into the SSH ramdisk " r1
-                echo "[*] Waiting 6 seconds before continuing.."
-                sleep 6
-                sudo killall -STOP -c usbd
-                if [[ ! "$no_prompt_replug" == 1 ]]; then
-                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                        echo "[*] Ok no problem, continuing.."
-                    else
-                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    fi
-                fi
-                "$bin"/iproxy 2222 22 &
-            fi
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "bash -c fixup_update_partition" 2> /dev/null
-            echo "[*] Testing for baseband presence"
-            if [[ "$version" == "13."* || "$version" == "14."* ]]; then
-                systemdisk=8
-                datadisk=9
-                prebootdisk=10
-                if [ "$(remote_cmd "/usr/bin/mgask HasBaseband | grep -E 'true|false'")" = "true" ] && [[ "${cpid}" == *"0x700"* ]]; then
-                    systemdisk=7
-                    datadisk=8
-                    prebootdisk=9
-                elif [ "$(remote_cmd "/usr/bin/mgask HasBaseband | grep -E 'true|false'")" = "false" ]; then
-                    if [[ "${cpid}" == *"0x700"* ]]; then
-                        systemdisk=6
-                        datadisk=7
-                        prebootdisk=8
-                    else
-                        systemdisk=7
-                        datadisk=8
-                        prebootdisk=9
-                    fi
-                fi
-                systemfs=disk0s1s$systemdisk
-                datafs=disk0s1s$datadisk
-                prebootfs=disk0s1s$prebootdisk
-                rm -rf "$dir"/$deviceid/$cpid/$version/iBSS.patched
-                rm -rf "$dir"/$deviceid/$cpid/$version/iBEC.patched
-                rm -rf "$dir"/$deviceid/$cpid/$version/iBSS.img4
-                rm -rf "$dir"/$deviceid/$cpid/$version/iBEC.img4
-                mkdir -p "$dir"/work
-                cd "$dir"/work
-                "$bin"/img4tool -e -s "$dir"/other/shsh/"${check}".shsh -m IM4M
-                "$bin"/iBoot64Patcher "$dir"/$deviceid/$cpid/$version/iBSS.dec "$dir"/$deviceid/$cpid/$version/iBSS.patched
-                "$bin"/iBoot64Patcher "$dir"/$deviceid/$cpid/$version/iBEC.dec "$dir"/$deviceid/$cpid/$version/iBEC.patched -b "$boot_args rd=$systemfs amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x100 PE_i_can_has_debugger=1 amfi_get_out_of_my_way=1 amfi_allow_any_signature=1" -n
-                "$bin"/img4 -i "$dir"/$deviceid/$cpid/$version/iBSS.patched -o "$dir"/$deviceid/$cpid/$version/iBSS.img4 -M IM4M -A -T ibss
-                "$bin"/img4 -i "$dir"/$deviceid/$cpid/$version/iBEC.patched -o "$dir"/$deviceid/$cpid/$version/iBEC.img4 -M IM4M -A -T ibec
-                cd "$dir"/
-                rm -rf work
-                sleep 2
+        _wait_for_dfu
+        sudo killall -STOP -c usbd
+        if [[ ! "$no_prompt_replug" == 1 ]]; then
+            read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+            if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                echo "[*] Waiting 10 seconds before continuing.."
+                sleep 10
+            elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                echo "[*] Ok no problem, continuing.."
             else
-                if [[ "$r" == "16"* || "$r" == "17"* ]]; then
-                    systemdisk=9
-                    datadisk=10
-                    systemfs=disk0s1s$systemdisk
-                    datafs=disk0s1s$datadisk
-                else
-                    systemdisk=8
-                    datadisk=9
-                    systemfs=disk0s1s$systemdisk
-                    datafs=disk0s1s$datadisk
-                fi
-            fi
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt4" 2> /dev/null
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt5" 2> /dev/null
-            echo "[*] Deleting /dev/$systemfs"
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/apfs_deletefs /dev/$systemfs"
-            sleep 1
-            echo "[*] Creating /dev/$systemfs"
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -A -v SystemX /dev/disk0s1"
-            sleep 2
-            remote_cmd "/sbin/apfs_deletefs /dev/$systemfs" && {
-                sleep 1
-                echo "[*] Creating /dev/$systemfs"
-                if [[ "$version" == "13."* || "$version" == "14."* ]]; then
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -o role=n -A -v SystemX /dev/disk0s1"
-                else
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -A -v SystemX /dev/disk0s1"
-                fi
-                sleep 2
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "ls /dev/"
-            } || {
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -A -v SystemX /dev/disk0s1"
-                sleep 2
-                remote_cmd "/sbin/apfs_deletefs /dev/$systemfs" && {
-                    sleep 1
-                    if [[ "$version" == "13."* || "$version" == "14."* ]]; then
-                        "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -o role=n -A -v SystemX /dev/disk0s1"
-                    else
-                        "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -A -v SystemX /dev/disk0s1"
-                    fi
-                    sleep 2
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "ls /dev/"
-                } || {
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -A -v SystemX /dev/disk0s1"
-                    sleep 2
-                    remote_cmd "/sbin/apfs_deletefs /dev/$systemfs" && {
-                        sleep 1
-                        if [[ "$version" == "13."* || "$version" == "14."* ]]; then
-                            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -o role=n -A -v SystemX /dev/disk0s1"
-                        else
-                            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -A -v SystemX /dev/disk0s1"
-                        fi
-                        sleep 2
-                        "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "ls /dev/"
-                    } || {
-                        "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -A -v SystemX /dev/disk0s1"
-                        sleep 2
-                        remote_cmd "/sbin/apfs_deletefs /dev/$systemfs" && {
-                            sleep 1
-                            if [[ "$version" == "13."* || "$version" == "14."* ]]; then
-                                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -o role=n -A -v SystemX /dev/disk0s1"
-                            else
-                                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -A -v SystemX /dev/disk0s1"
-                            fi
-                            sleep 2
-                            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "ls /dev/"
-                        } || {
-                            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -A -v SystemX /dev/disk0s1"
-                            sleep 2
-                            remote_cmd "/sbin/apfs_deletefs /dev/$systemfs" && {
-                                sleep 1
-                                if [[ "$version" == "13."* || "$version" == "14."* ]]; then
-                                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -o role=n -A -v SystemX /dev/disk0s1"
-                                else
-                                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -A -v SystemX /dev/disk0s1"
-                                fi
-                                sleep 2
-                                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "ls /dev/"
-                            } || {
-                                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -A -v SystemX /dev/disk0s1"
-                                sleep 2
-                                remote_cmd "/sbin/apfs_deletefs /dev/$systemfs" && {
-                                    sleep 1
-                                    if [[ "$version" == "13."* || "$version" == "14."* ]]; then
-                                        "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -o role=n -A -v SystemX /dev/disk0s1"
-                                    else
-                                        "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -A -v SystemX /dev/disk0s1"
-                                    fi
-                                    sleep 2
-                                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "ls /dev/"
-                                } || {
-                                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -A -v SystemX /dev/disk0s1"
-                                    sleep 2
-                                    remote_cmd "/sbin/apfs_deletefs /dev/$systemfs" && {
-                                        sleep 1
-                                        if [[ "$version" == "13."* || "$version" == "14."* ]]; then
-                                            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -o role=n -A -v SystemX /dev/disk0s1"
-                                        else
-                                            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -A -v SystemX /dev/disk0s1"
-                                        fi
-                                        sleep 2
-                                        "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "ls /dev/"
-                                    } || {
-                                        echo "[*] An error occured while trying to create /dev/$systemfs"
-                                        exit 0
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            echo "[*] /dev/$systemfs created, continuing..."
-            echo "[*] Deleting /dev/$datafs"
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/apfs_deletefs /dev/$datafs"
-            sleep 1
-            echo "[*] Creating /dev/$datafs"
-            if [[ "$version" == "13."* || "$version" == "14."* ]]; then
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -o role=0 -A -v DataX /dev/disk0s1"
-            else
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -A -v DataX /dev/disk0s1"
-            fi
-            sleep 2
-            echo "[*] /dev/$datafs created, continuing..."
-            if [[ "$version" == "14."* ]]; then
-                echo "[*] Deleting /dev/$prebootfs"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/apfs_deletefs /dev/$prebootfs"
-                sleep 1
-                echo "[*] Creating /dev/$prebootfs"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_apfs -o role=D -A -v PrebootX /dev/disk0s1"
-                sleep 2
-                echo "[*] /dev/$prebootfs created, continuing..."
-            fi
-            echo "[*] Uploading $dir/$deviceid/$cpid/$version/OS.dmg, this may take up to 10 minutes.."
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/$systemfs /mnt4"
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/$datafs /mnt5"
-            if [ "$os" = "Darwin" ]; then
-                "$bin"/sshpass -p 'alpine' scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/OS.dmg root@localhost:/mnt4
-            else
-                "$bin"/sshpass -p 'alpine' scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/OS.dmg root@localhost:/mnt5
-            fi
-            if [[ "$r" == "16"* || "$r" == "17"* ]]; then
-                systemdisk=9
-                datadisk=10
-                systemfs=disk1s$systemdisk
-                datafs=disk1s$datadisk
-            fi
-        else
-            if [[ "$dualboot_hfs" == 1 ]]; then
-                if [[ ! -e "$dir"/$deviceid/0.0/mnt1.tar.gz ]]; then
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/disk0s1s1 /mnt1"
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s1 /mnt1"
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar --preserve-permissions -czvf - /mnt1/" > "$dir"/$deviceid/0.0/mnt1.tar.gz
-                fi
-                if [[ ! -e "$dir"/$deviceid/0.0/mnt3.tar.gz ]]; then
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/disk0s1s3 /mnt3"
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s3 /mnt3"
-                    bbfs=$(remote_cmd "/usr/bin/find /mnt3 -name 'bbfs'" 2> /dev/null)
-                    if [[ "$bbfs" == "/mnt3/bbfs" ]]; then
-                        "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cd /mnt3 && tar --preserve-permissions -czvf - *" > "$dir"/$deviceid/0.0/mnt3.tar.gz
-                    fi
-                fi
-            fi
-            if [[ "$hit" == 1 ]]; then
-                if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$version" == "9."* ]]; then
-                    $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-                    sleep 5
-                    _kill_if_running iproxy
-                    echo "[*] Device should boot to Recovery mode. Please wait..."
-                    if [ "$os" = "Darwin" ]; then
-                        if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                            if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                                sleep 10
-                                if [ "$(get_device_mode)" = "recovery" ]; then
-                                    "$bin"/dfuhelper.sh
-                                else
-                                    "$bin"/dfuhelper4.sh
-                                    sleep 5
-                                    "$bin"/irecovery -c "setenv auto-boot false"
-                                    "$bin"/irecovery -c "saveenv"
-                                    "$bin"/dfuhelper.sh
-                                fi
-                            elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                                "$bin"/dfuhelper2.sh
-                            else
-                                "$bin"/dfuhelper3.sh
-                            fi
-                        fi
-                    else
-                        if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                            if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                                sleep 10
-                                if [ "$(get_device_mode)" = "recovery" ]; then
-                                    "$bin"/dfuhelper.sh
-                                else
-                                    "$bin"/dfuhelper4.sh
-                                    sleep 5
-                                    "$bin"/irecovery -c "setenv auto-boot false"
-                                    "$bin"/irecovery -c "saveenv"
-                                    "$bin"/dfuhelper.sh
-                                fi
-                            elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                                "$bin"/dfuhelper2.sh
-                            else
-                                "$bin"/dfuhelper3.sh
-                            fi
-                        fi
-                    fi
-                    _wait_for_dfu
-                    sudo killall -STOP -c usbd
-                    if [[ ! "$no_prompt_replug" == 1 ]]; then
-                        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                            echo "[*] Waiting 10 seconds before continuing.."
-                            sleep 10
-                        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                            echo "[*] Ok no problem, continuing.."
-                        else
-                            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                            echo "[*] Waiting 10 seconds before continuing.."
-                            sleep 10
-                        fi
-                    fi
-                    if [[ "$version" == "7."* || "$version" == "8."* ]]; then
-                        if [ "$os" = "Darwin" ]; then
-                            cd "$dir"/$deviceid/$cpid/ramdisk/8.4.1
-                        else
-                            cd "$dir"/$deviceid/$cpid/ramdisk/11.4
-                        fi
-                    elif [[ "$version" == "10.3"* || "$version" == "11."* ||  "$version" == "12."* || "$version" == "13."* || "$version" == "14."* ]]; then
-                        cd "$dir"/$deviceid/$cpid/ramdisk/$r
-                    elif [[ "$os" = "Darwin" && ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$version" == "9."* ]]; then
-                        cd "$dir"/$deviceid/$cpid/ramdisk/9.3
-                    else
-                        cd "$dir"/$deviceid/$cpid/ramdisk/11.4
-                    fi
-                    _boot_ramdisk $deviceid $replace $r
-                    cd "$dir"/
-                    read -p "[*] Press Enter once your device has fully booted into the SSH ramdisk. " r1
-                    echo "[*] Waiting 6 seconds before continuing.."
-                    sleep 6
-                    sudo killall -STOP -c usbd
-                    if [[ ! "$no_prompt_replug" == 1 ]]; then
-                        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                            echo "[*] Waiting 10 seconds before continuing.."
-                            sleep 10
-                        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                            echo "[*] Ok no problem, continuing.."
-                        else
-                            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                            echo "[*] Waiting 10 seconds before continuing.."
-                            sleep 10
-                        fi
-                    fi
-                    "$bin"/iproxy 2222 22 &
-                fi
-            fi
-            if [[ "$dualboot_hfs" == 1 ]]; then
-                remote_cmd "/sbin/mount -w -t hfs /dev/disk0s1s4 /mnt4 2> /dev/null" && {
-                    echo "[*] /dev/disk0s1s4 already exists and is hfs, skipping lwvm init.."
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt4" 2> /dev/null
-                    sleep 2
-                    hit=1
-                } || {
-                    hit=0
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "lwvm init" 2> /dev/null
-                    sleep 1
-                    echo "[*] Wiped the device"
-                    $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-                    sleep 5
-                    _kill_if_running iproxy
-                    echo "[*] Device should boot to Recovery mode. Please wait..."
-                    if [ "$os" = "Darwin" ]; then
-                        if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                            if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                                sleep 10
-                                if [ "$(get_device_mode)" = "recovery" ]; then
-                                    "$bin"/dfuhelper.sh
-                                else
-                                    "$bin"/dfuhelper4.sh
-                                    sleep 5
-                                    "$bin"/irecovery -c "setenv auto-boot false"
-                                    "$bin"/irecovery -c "saveenv"
-                                    "$bin"/dfuhelper.sh
-                                fi
-                            elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                                "$bin"/dfuhelper2.sh
-                            else
-                                "$bin"/dfuhelper3.sh
-                            fi
-                        fi
-                    else
-                        if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                            if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                                sleep 10
-                                if [ "$(get_device_mode)" = "recovery" ]; then
-                                    "$bin"/dfuhelper.sh
-                                else
-                                    "$bin"/dfuhelper4.sh
-                                    sleep 5
-                                    "$bin"/irecovery -c "setenv auto-boot false"
-                                    "$bin"/irecovery -c "saveenv"
-                                    "$bin"/dfuhelper.sh
-                                fi
-                            elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                                "$bin"/dfuhelper2.sh
-                            else
-                                "$bin"/dfuhelper3.sh
-                            fi
-                        fi
-                    fi
-                    _wait_for_dfu
-                    sudo killall -STOP -c usbd
-                    if [[ ! "$no_prompt_replug" == 1 ]]; then
-                        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                            echo "[*] Waiting 10 seconds before continuing.."
-                            sleep 10
-                        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                            echo "[*] Ok no problem, continuing.."
-                        else
-                            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                            echo "[*] Waiting 10 seconds before continuing.."
-                            sleep 10
-                        fi
-                    fi
-                    if [[ "$version" == "7."* || "$version" == "8."* ]]; then
-                        if [ "$os" = "Darwin" ]; then
-                            cd "$dir"/$deviceid/$cpid/ramdisk/8.4.1
-                        else
-                            cd "$dir"/$deviceid/$cpid/ramdisk/11.4
-                        fi
-                    elif [[ "$version" == "10.3"* || "$version" == "11."* ||  "$version" == "12."* || "$version" == "13."* || "$version" == "14."* ]]; then
-                        cd "$dir"/$deviceid/$cpid/ramdisk/$r
-                    elif [[ "$os" = "Darwin" && ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$version" == "9."* ]]; then
-                        cd "$dir"/$deviceid/$cpid/ramdisk/9.3
-                    else
-                        cd "$dir"/$deviceid/$cpid/ramdisk/11.4
-                    fi
-                    _boot_ramdisk $deviceid $replace $r
-                    cd "$dir"/
-                    read -p "[*] Press Enter once your device has fully booted into the SSH ramdisk. " r1
-                    echo "[*] Waiting 6 seconds before continuing.."
-                    sleep 6
-                    sudo killall -STOP -c usbd
-                    if [[ ! "$no_prompt_replug" == 1 ]]; then
-                        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                            echo "[*] Waiting 10 seconds before continuing.."
-                            sleep 10
-                        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                            echo "[*] Ok no problem, continuing.."
-                        else
-                            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                            echo "[*] Waiting 10 seconds before continuing.."
-                            sleep 10
-                        fi
-                    fi
-                    "$bin"/iproxy 2222 22 &
-                }
-            else
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "lwvm init" 2> /dev/null
-                sleep 1
-                echo "[*] Wiped the device"
-                $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-                sleep 5
-                _kill_if_running iproxy
-                echo "[*] Device should boot to Recovery mode. Please wait..."
-                if [ "$os" = "Darwin" ]; then
-                    if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                        if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                            sleep 10
-                            if [ "$(get_device_mode)" = "recovery" ]; then
-                                "$bin"/dfuhelper.sh
-                            else
-                                "$bin"/dfuhelper4.sh
-                                sleep 5
-                                "$bin"/irecovery -c "setenv auto-boot false"
-                                "$bin"/irecovery -c "saveenv"
-                                "$bin"/dfuhelper.sh
-                            fi
-                        elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                            "$bin"/dfuhelper2.sh
-                        else
-                            "$bin"/dfuhelper3.sh
-                        fi
-                    fi
-                else
-                    if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                        if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                            sleep 10
-                            if [ "$(get_device_mode)" = "recovery" ]; then
-                                "$bin"/dfuhelper.sh
-                            else
-                                "$bin"/dfuhelper4.sh
-                                sleep 5
-                                "$bin"/irecovery -c "setenv auto-boot false"
-                                "$bin"/irecovery -c "saveenv"
-                                "$bin"/dfuhelper.sh
-                            fi
-                        elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                            "$bin"/dfuhelper2.sh
-                        else
-                            "$bin"/dfuhelper3.sh
-                        fi
-                    fi
-                fi
-                _wait_for_dfu
-                sudo killall -STOP -c usbd
-                if [[ ! "$no_prompt_replug" == 1 ]]; then
-                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                        echo "[*] Ok no problem, continuing.."
-                    else
-                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    fi
-                fi
-                if [[ "$version" == "7."* || "$version" == "8."* ]]; then
-                    if [ "$os" = "Darwin" ]; then
-                        cd "$dir"/$deviceid/$cpid/ramdisk/8.4.1
-                    else
-                        cd "$dir"/$deviceid/$cpid/ramdisk/11.4
-                    fi
-                elif [[ "$version" == "10.3"* || "$version" == "11."* ||  "$version" == "12."* || "$version" == "13."* || "$version" == "14."* ]]; then
-                    cd "$dir"/$deviceid/$cpid/ramdisk/$r
-                elif [[ "$os" = "Darwin" && ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$version" == "9."* ]]; then
-                    cd "$dir"/$deviceid/$cpid/ramdisk/9.3
-                else
-                    cd "$dir"/$deviceid/$cpid/ramdisk/11.4
-                fi
-                _boot_ramdisk $deviceid $replace $r
-                cd "$dir"/
-                read -p "[*] Press Enter once your device has fully booted into the SSH ramdisk. " r1
-                echo "[*] Waiting 6 seconds before continuing.."
-                sleep 6
-                sudo killall -STOP -c usbd
-                if [[ ! "$no_prompt_replug" == 1 ]]; then
-                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                        echo "[*] Ok no problem, continuing.."
-                    else
-                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    fi
-                fi
-                "$bin"/iproxy 2222 22 &
+                echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                echo "[*] Waiting 10 seconds before continuing.."
+                sleep 10
             fi
         fi
-        if [[ "$version" == "10.3"* || "$version" == "11."* || "$version" == "12."* || "$version" == "13."* || "$version" == "14."* ]]; then
-            $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-            sleep 5
-            _kill_if_running iproxy
-            echo "[*] Device should boot to Recovery mode. Please wait..."
-            if [ "$os" = "Darwin" ]; then
-                if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                    if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                        sleep 10
-                        if [ "$(get_device_mode)" = "recovery" ]; then
-                            "$bin"/irecovery -c "setenv auto-boot true"
-                            "$bin"/irecovery -c "saveenv"
-                            "$bin"/dfuhelper.sh
-                        else
-                            "$bin"/dfuhelper4.sh
-                            sleep 5
-                            "$bin"/irecovery -c "setenv auto-boot true"
-                            "$bin"/irecovery -c "saveenv"
-                            "$bin"/dfuhelper.sh
-                        fi
-                    elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                        "$bin"/dfuhelper2.sh
-                    else
-                        "$bin"/dfuhelper3.sh
-                    fi
-                fi
+        if [[ "$version" == "10."* || "$version" == "11.0" ]]; then
+            rdversion="10.3.3"
+        elif [[ "$deviceid" == "iPhone8,1" && "$version" == "11.0" ]]; then
+            rdversion="10.3.3"
+        elif [[ "$version" == "7."* || "$version" == "8."* ]]; then
+            rdversion="8.4.1"
+        elif [[ "$os" = "Darwin" && ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$version" == "9."* ]]; then
+            rdversion="9.3"
+        else
+            rdversion="$version"
+        fi
+        _download_ramdisk_boot_files $deviceid $replace $rdversion
+        cd "$dir"/$deviceid/$cpid/ramdisk/$rdversion
+        if [[ "$pongo" == 1 ]]; then
+            hit2=1
+            pongo=0
+        fi
+        if [[ "$cpid" == "0x8001" || "$cpid" == "0x8000" || "$cpid" == "0x8003" ]]; then
+            kbag="24A0F3547373C6FED863FC0F321D7FEA216D0258B48413903939DF968CC2C0E571949EFB72DED8B55B8670932CA7A039"
+            iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
+            key=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ' ' -f 4)
+            ivkey="$iv$key"
+            pwd
+            echo "$ivkey"
+        fi
+        if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
+            "$bin"/ipwnder -p
+            sleep 1
+            "$bin"/gaster reset
+        else
+            "$bin"/gaster pwn
+            "$bin"/gaster reset
+        fi
+        "$bin"/irecovery -f iBSS.img4
+        sleep 1
+        "$bin"/irecovery -f iBEC.img4
+        sleep 2
+        if [ "$check" = '0x8010' ] || [ "$check" = '0x8015' ] || [ "$check" = '0x8011' ] || [ "$check" = '0x8012' ]; then
+            sleep 1
+            "$bin"/irecovery -c go
+            sleep 2
+        else
+            sleep 1
+        fi
+        if [[ "$hit2" == 1 ]]; then
+            hit2=0
+            pongo=1
+        fi
+        cd "$dir"/
+        echo "Current nonce"
+        "$bin"/irecovery -q | grep NONC
+        generator=$(cat "$dir"/$deviceid/0.0/shsh.shsh2 | grep "0x" | tail -n 1 | cut -d '>' -f 2 | cut -d '<' -f 1)
+        echo "Setting nonce to $generator"
+        "$bin"/irecovery -c "setenv com.apple.System.boot-nonce $generator"
+        sleep 1
+        "$bin"/irecovery -c "saveenv"
+        sleep 1
+        "$bin"/irecovery -c "setenv auto-boot false"
+        sleep 1
+        "$bin"/irecovery -c "saveenv"
+        sleep 1
+        "$bin"/irecovery -c "reset"
+        echo "Waiting for device to restart into recovery mode"
+        sleep 7
+        echo "New nonce"
+        "$bin"/irecovery -q | grep NONC
+        echo "[*] The device should now boot into recovery mode"
+        echo "[*] Please follow the on screen instructions to put your device back into dfu mode"
+        sleep 5
+        "$bin"/dfuhelper3.sh
+        if [ "$os" = "Darwin" ]; then
+            if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
+                "$bin"/dfuhelper3.sh
+            fi
+        else
+            if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
+                "$bin"/dfuhelper3.sh
+            fi
+        fi
+        _wait_for_dfu
+        sudo killall -STOP -c usbd
+        if [[ ! "$no_prompt_replug" == 1 ]]; then
+            read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+            if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                echo "[*] Waiting 10 seconds before continuing.."
+                sleep 10
+            elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                echo "[*] Ok no problem, continuing.."
             else
-                if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                    if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                        sleep 10
-                        if [ "$(get_device_mode)" = "recovery" ]; then
-                            "$bin"/irecovery -c "setenv auto-boot true"
-                            "$bin"/irecovery -c "saveenv"
-                            "$bin"/dfuhelper.sh
-                        else
-                            "$bin"/dfuhelper4.sh
-                            sleep 5
-                            "$bin"/irecovery -c "setenv auto-boot true"
-                            "$bin"/irecovery -c "saveenv"
-                            "$bin"/dfuhelper.sh
-                        fi
-                    elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                        "$bin"/dfuhelper2.sh
-                    else
-                        "$bin"/dfuhelper3.sh
-                    fi
-                fi
+                echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                echo "[*] Waiting 10 seconds before continuing.."
+                sleep 10
             fi
-            _wait_for_dfu
-            sudo killall -STOP -c usbd
-            if [[ ! "$no_prompt_replug" == 1 ]]; then
-                read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
-                elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                    echo "[*] Ok no problem, continuing.."
-                else
-                    echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
-                fi
+        fi
+        if [[ "$cpid" == "0x8001" || "$cpid" == "0x8000" || "$cpid" == "0x8003" ]]; then
+            kbag="24A0F3547373C6FED863FC0F321D7FEA216D0258B48413903939DF968CC2C0E571949EFB72DED8B55B8670932CA7A039"
+            iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
+            key=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ' ' -f 4)
+            ivkey="$iv$key"
+            pwd
+            echo "$ivkey"
+        fi
+        if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
+            "$bin"/ipwnder -p
+            sleep 1
+            "$bin"/gaster reset
+        else
+            "$bin"/gaster pwn
+            "$bin"/gaster reset
+        fi
+        "$bin"/futurerestore -t "$dir"/$deviceid/0.0/shsh.shsh2 --use-pwndfu --skip-blob --serial --rdsk "$dir"/$deviceid/$cpid/$version/rdsk.im4p --rkrn "$dir"/$deviceid/$cpid/$version/rkrn.im4p --latest-sep --latest-baseband "$dir"/$deviceid/$cpid/$version/ipswcfw.ipsw
+        rm -rf "$dir"/$deviceid/$cpid/$version/ipswcfw*
+        _wait_for_dfu
+        "$bin"/dfuhelper3.sh
+        if [ "$os" = "Darwin" ]; then
+            if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
+                "$bin"/dfuhelper3.sh
             fi
-            if [[ "$version" == "7."* || "$version" == "8."* ]]; then
-                if [ "$os" = "Darwin" ]; then
-                    cd "$dir"/$deviceid/$cpid/ramdisk/8.4.1
-                else
-                    cd "$dir"/$deviceid/$cpid/ramdisk/11.4
-                fi
-            elif [[ "$version" == "10.3"* || "$version" == "11."* ||  "$version" == "12."* || "$version" == "13."* || "$version" == "14."* ]]; then
-                cd "$dir"/$deviceid/$cpid/ramdisk/$r
-            elif [[ "$os" = "Darwin" && ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$version" == "9."* ]]; then
-                cd "$dir"/$deviceid/$cpid/ramdisk/9.3
+        else
+            if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
+                "$bin"/dfuhelper3.sh
+            fi
+        fi
+        _wait_for_dfu
+        sudo killall -STOP -c usbd
+        if [[ ! "$no_prompt_replug" == 1 ]]; then
+            read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+            if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                echo "[*] Waiting 10 seconds before continuing.."
+                sleep 10
+            elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                echo "[*] Ok no problem, continuing.."
+            else
+                echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                echo "[*] Waiting 10 seconds before continuing.."
+                sleep 10
+            fi
+        fi
+        if [[ "$version" == "7."* || "$version" == "8."* ]]; then
+            if [ "$os" = "Darwin" ]; then
+                cd "$dir"/$deviceid/$cpid/ramdisk/8.4.1
             else
                 cd "$dir"/$deviceid/$cpid/ramdisk/11.4
             fi
-            _boot_ramdisk $deviceid $replace $r
-            cd "$dir"/
-            read -p "[*] Press Enter once your device has fully booted into the SSH ramdisk. " r1
-            echo "[*] Waiting 6 seconds before continuing.."
-            sleep 6
-            sudo killall -STOP -c usbd
-            if [[ ! "$no_prompt_replug" == 1 ]]; then
-                read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
-                elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                    echo "[*] Ok no problem, continuing.."
-                else
-                    echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                    read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                    echo "[*] Waiting 10 seconds before continuing.."
-                    sleep 10
-                fi
-            fi
-            "$bin"/iproxy 2222 22 &
-            if [ "$os" = "Darwin" ]; then
-                echo "[*] /System/Library/Filesystems/apfs.fs/apfs_invert -d /dev/disk0s1 -s $systemdisk -n OS.dmg"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/System/Library/Filesystems/apfs.fs/apfs_invert -d /dev/disk0s1 -s $systemdisk -n OS.dmg"
-            else
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/$systemfs /mnt4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/$datafs /mnt5"
-                disktomount="$("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/hdik /mnt5/OS.dmg' | tail -n 1 | cut -d ' ' -f 1)"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs -o ro $disktomount /mnt3"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cp -av /mnt3/* /mnt4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/hdik -e $disktomount"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt5/OS.dmg"
-            fi
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/$systemfs /mnt4"
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/$datafs /mnt5"
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv -v /mnt4/private/var/* /mnt5"
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt4/usr/local/standalone/firmware/Baseband"
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir /mnt5/keybags"
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt5/wireless/baseband_data"
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt4/private/xarts"
-            if [[ "$version" == "13."* || "$version" == "14."* ]]; then
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt4/private/preboot"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt4" 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt5" 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "bash -c mount_filesystems" 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt4" 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt5" 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/$systemfs /mnt4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/$datafs /mnt5"
-            fi
-            if [[ "$version" == "14."* ]]; then
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/$prebootfs /mnt4/private/preboot"
-            fi
-            if [[ "$version" == "13."* || "$version" == "14."* ]]; then
-                has_active=$(remote_cmd "ls /mnt6/active" 2> /dev/null)
-                if [ ! "$has_active" = "/mnt6/active" ]; then
-                    echo "[!] Active file does not exist! Please use SSH to create it"
-                    echo "    /mnt6/active should contain the name of the UUID in /mnt6"
-                    echo "    When done, type reboot in the SSH session, then rerun the script"
-                    echo "    ssh root@localhost -p 2222"
-                    $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-                    _kill_if_running iproxy
-                    exit 0
-                fi
-                active=$(remote_cmd "cat /mnt6/active" 2> /dev/null)
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cp -na /mnt6/* /mnt4/private/preboot"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags -R noschg /mnt4/private/preboot/*"
-                if [[ ! "$version" == "14."* ]]; then
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/aopfw.img4 root@localhost:/mnt4/private/preboot/$active/usr/standalone/firmware/FUD/AOP.img4
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/AOP.img4"
-                else
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/AOP.img4"
-                fi
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/homerfw.img4 root@localhost:/mnt4/private/preboot/$active/usr/standalone/firmware/FUD/Homer.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/trustcache root@localhost:/mnt4/private/preboot/$active/usr/standalone/firmware/FUD/StaticTrustCache.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/multitouch.img4 root@localhost:/mnt4/private/preboot/$active/usr/standalone/firmware/FUD/Multitouch.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/audiocodecfirmware.img4 root@localhost:/mnt4/private/preboot/$active/usr/standalone/firmware/FUD/AudioCodecFirmware.img4
-                if [[ "$version" == "13."* || "$version" == "14."* ]]; then
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/ispfw.img4 root@localhost:/mnt4/private/preboot/$active/usr/standalone/firmware/FUD/ISP.img4
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/ISP.img4"
-                else
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/ISP.img4"
-                fi
-                # ios 15
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/AVE.img4"
-                # stop ios from deleting our files
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/ISP.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/Homer.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/StaticTrustCache.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/Multitouch.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/AudioCodecFirmware.img4"
-            fi
-            if [[ "$version" == "14."* ]]; then
-                if [[ "$cpid" == "0x8010" ]]; then
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv /mnt4/private/preboot/$active /mnt4/private/preboot/5C6BAFFDE32FC78BA07810AB3C6CB2E6ED0321BA28A016A1C656CA0FC3262B8CE069EE451F3750F8DC5C15C2A152252F"
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "echo '5C6BAFFDE32FC78BA07810AB3C6CB2E6ED0321BA28A016A1C656CA0FC3262B8CE069EE451F3750F8DC5C15C2A152252F' > /mnt4/private/preboot/active"
-                fi
-            fi 
-            if [[ ! "$r" == "16."* && ! "$r" == "17."* ]]; then
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 "$dir"/$deviceid/0.0/keybags root@localhost:/mnt5
-            fi
-            if [ -e "$dir"/$deviceid/0.0/Baseband ]; then
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 "$dir"/$deviceid/0.0/Baseband root@localhost:/mnt4/usr/local/standalone/firmware
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags -R schg /mnt4/usr/local/standalone/firmware/Baseband"
-            fi
-            "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/apticket.der root@localhost:/mnt4/System/Library/Caches/
-            "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/sep-firmware.img4 root@localhost:/mnt4/usr/standalone/firmware/
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/usr/standalone/firmware/sep-firmware.img4"
-            if [ -e "$dir"/$deviceid/0.0/FUD ]; then
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt4/usr/standalone/firmware/FUD"
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 "$dir"/$deviceid/0.0/FUD/* root@localhost:/mnt4/usr/standalone/firmware/FUD
-            fi
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rv /mnt4/System/Library/Caches/com.apple.factorydata"
-            if [ -e "$dir"/$deviceid/0.0/com.apple.factorydata ]; then
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt4/System/Library/Caches/com.apple.factorydata"
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 "$dir"/$deviceid/0.0/com.apple.factorydata/* root@localhost:/mnt4/System/Library/Caches/com.apple.factorydata
-            fi
-            if [ -e "$dir"/$deviceid/0.0/IC-Info.sisv ]; then
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt5/mobile/Library/FairPlay/iTunes_Control/iTunes/"
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/IC-Info.sisv root@localhost:/mnt5/mobile/Library/FairPlay/iTunes_Control/iTunes/IC-Info.sisv 2> /dev/null
-            fi
-            if [ -e "$dir"/$deviceid/0.0/com.apple.commcenter.device_specific_nobackup.plist ]; then
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt5/wireless/Library/Preferences/"
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/com.apple.commcenter.device_specific_nobackup.plist root@localhost:/mnt5/wireless/Library/Preferences/com.apple.commcenter.device_specific_nobackup.plist 2> /dev/null
-            fi
-            cp "$dir"/jb/fstab_apfs "$dir"/$deviceid/$cpid/$version/fstab.patched
-            LC_ALL=C sed -i -e "s/mnt4/disk0s1s$systemdisk/g" "$dir"/$deviceid/$cpid/$version/fstab.patched
-            LC_ALL=C sed -i -e "s/mnt5/disk0s1s$datadisk/g" "$dir"/$deviceid/$cpid/$version/fstab.patched
-            "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/fstab.patched root@localhost:/mnt4/etc/fstab
-            "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/data_ark.plist_ios10.tar root@localhost:/mnt5/
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar -xvf /mnt5/data_ark.plist_ios10.tar -C /mnt5"
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt5/data_ark.plist_ios10.tar"
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt5/root/Library/Lockdown/device_private_key.pem"
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt5/root/Library/Lockdown/device_public_key.pem"
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt5/root/Library/Lockdown/escrow_records"
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt5/root/Library/Lockdown/pair_records"
-            "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/usr/libexec/mobileactivationd "$dir"/$deviceid/$cpid/$version/mobactivationd.raw
-            if [[ ! -e "$dir"/$deviceid/0.0/activation_records/activation_record.plist || "$force_activation" == 1 ]]; then
-                "$bin"/mobactivationd64patcher "$dir"/$deviceid/$cpid/$version/mobactivationd.raw "$dir"/$deviceid/$cpid/$version/mobactivationd.patched -b -c -d
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/mobactivationd.patched root@localhost:/mnt4/usr/libexec/mobileactivationd
-            fi
-            "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/kernelcache root@localhost:/mnt4/System/Library/Caches/com.apple.kernelcaches
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/usr/lib/libmis.dylib"
-            if [[ ! "$version" == "14."* ]]; then
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/aopfw.img4 root@localhost:/mnt4/usr/standalone/firmware/FUD/AOP.img4
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/usr/standalone/firmware/FUD/AOP.img4"
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/homerfw.img4 root@localhost:/mnt4/usr/standalone/firmware/FUD/Homer.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/trustcache root@localhost:/mnt4/usr/standalone/firmware/FUD/StaticTrustCache.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/multitouch.img4 root@localhost:/mnt4/usr/standalone/firmware/FUD/Multitouch.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/audiocodecfirmware.img4 root@localhost:/mnt4/usr/standalone/firmware/FUD/AudioCodecFirmware.img4
-                if [[ "$version" == "13."* ]]; then
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/ispfw.img4 root@localhost:/mnt4/usr/standalone/firmware/FUD/ISP.img4
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/usr/standalone/firmware/FUD/ISP.img4"
-                else
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/usr/standalone/firmware/FUD/ISP.img4"
-                fi
-                # ios 15
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/usr/standalone/firmware/FUD/AVE.img4"
-                # stop ios from deleting our files
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/usr/standalone/firmware/FUD/ISP.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/usr/standalone/firmware/FUD/Homer.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/usr/standalone/firmware/FUD/StaticTrustCache.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/usr/standalone/firmware/FUD/Multitouch.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/usr/standalone/firmware/FUD/AudioCodecFirmware.img4"
-            fi
-            # fix stuck on apple logo after long progress bar
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/System/Library/DataClassMigrators/CoreLocationMigrator.migrator/"
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/System/Library/DataClassMigrators/PassbookDataMigrator.migrator/"
-            if [[ -e "$dir"/$deviceid/0.0/activation_records && ! "$force_activation" == 1 ]]; then
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt5/root/Library/Lockdown/activation_records"
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 "$dir"/$deviceid/0.0/activation_records/* root@localhost:/mnt5/root/Library/Lockdown/activation_records 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags -R schg /mnt5/root/Library/Lockdown/activation_records"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt5/mobile/Library/mad/activation_records"
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 "$dir"/$deviceid/0.0/activation_records/* root@localhost:/mnt5/mobile/Library/mad/activation_records 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags -R schg /mnt5/mobile/Library/mad/activation_records"
-            fi
-            if [[ -e "$dir"/$deviceid/0.0/activation_records/activation_record.plist && ! "$force_activation" == 1 ]]; then
-                if [ -e "$dir"/$deviceid/0.0/data_ark.plist ]; then
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/data_ark.plist root@localhost:/mnt5/root/Library/Lockdown/data_ark.plist 2> /dev/null
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt5/root/Library/Lockdown/data_ark.plist"
-                fi
-            fi
-            if [[ "$r" == "16."* || "$r" == "17."* ]]; then
-                echo "[*] Enabling fixkeybag and putting it where /usr/libexec/keybagd should be.."
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'cp /mnt4/usr/libexec/keybagd /mnt4/usr/libexec/keybagd.bak' 2> /dev/null
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/fixkeybag root@localhost:/mnt4/usr/libexec/keybagd 2> /dev/null
-                echo "[*] Done"
-            fi
-            if [[ "$version" == "10."* ]]; then
-                if [[ "$appleinternal" == 1 ]]; then
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/AppleInternal.tar root@localhost:/mnt4/
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/PrototypeTools.framework_ios10.tar root@localhost:/mnt4/
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/CoreServices/SystemVersion.plist "$dir"/$deviceid/$cpid/$version/SystemVersion.plist
-                    LC_ALL=C sed -i -e 's/<\/dict>/<key>ReleaseType<\/key><string>Internal<\/string><key>ProductType<\/key><string>Internal<\/string><\/dict>/g' "$dir"/$deviceid/$cpid/$version/SystemVersion.plist
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/SystemVersion.plist root@localhost:/mnt4/System/Library/CoreServices/SystemVersion.plist
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/SpringBoard-Internal.strings root@localhost:/mnt4/System/Library/CoreServices/SpringBoard.app/en.lproj/
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/SpringBoard-Internal.strings root@localhost:/mnt4/System/Library/CoreServices/SpringBoard.app/en_GB.lproj/
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.springboard_ios10.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.springboard.plist
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar -xvf /mnt4/PrototypeTools.framework_ios10.tar -C /mnt4/System/Library/PrivateFrameworks/'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt4/System/Library/PrivateFrameworks/PrototypeTools.framework'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt4/PrototypeTools.framework_ios10.tar'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar -xvf /mnt4/AppleInternal.tar -C /mnt4/'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt4/AppleInternal/'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt4/AppleInternal.tar'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt5/mobile/Library/Caches/com.apple.MobileGestalt.plist'
-                fi
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/Meridian.app.tar.gz root@localhost:/mnt4/
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar --preserve-permissions -xzvf /mnt4/Meridian.app.tar.gz -C /mnt4/Applications' 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt4/Meridian.app.tar.gz' 2> /dev/null
-                if [[ ! "$deviceid" == "iPad"* ]]; then
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/UnlimFileManager.app.tar.gz root@localhost:/mnt4/
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar --preserve-permissions -xzvf /mnt4/UnlimFileManager.app.tar.gz -C /mnt4/Applications' 2> /dev/null
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt4/Applications/UnlimFileManager.app'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt4/UnlimFileManager.app.tar.gz' 2> /dev/null
-                fi
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'mkdir -p /mnt5/mobile/Library/Preferences' 2> /dev/null
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.Collection.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.Collection.plist
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.plist
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
-                "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -103
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
-                #"$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'cp /mnt4/usr/libexec/keybagd /mnt4/usr/libexec/keybagd.bak' 2> /dev/null
-                #"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/fixkeybag root@localhost:/mnt4/usr/libexec/keybagd 2> /dev/null
-            elif [[ "$version" == "11."* ]]; then
-                if [[ "$appleinternal" == 1 ]]; then
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/AppleInternal.tar root@localhost:/mnt4/
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/PrototypeTools.framework_ios11.tar root@localhost:/mnt4/
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/CoreServices/SystemVersion.plist "$dir"/$deviceid/$cpid/$version/SystemVersion.plist
-                    LC_ALL=C sed -i -e 's/<\/dict>/<key>ReleaseType<\/key><string>Internal<\/string><key>ProductType<\/key><string>Internal<\/string><\/dict>/g' "$dir"/$deviceid/$cpid/$version/SystemVersion.plist
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/SystemVersion.plist root@localhost:/mnt4/System/Library/CoreServices/SystemVersion.plist
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/SpringBoard-Internal.strings root@localhost:/mnt4/System/Library/CoreServices/SpringBoard.app/en.lproj/
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/SpringBoard-Internal.strings root@localhost:/mnt4/System/Library/CoreServices/SpringBoard.app/en_GB.lproj/
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.springboard_ios10.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.springboard.plist
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar -xvf /mnt4/PrototypeTools.framework_ios11.tar -C /mnt4/System/Library/PrivateFrameworks/'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt4/System/Library/PrivateFrameworks/PrototypeTools.framework'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt4/PrototypeTools.framework_ios11.tar'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar -xvf /mnt4/AppleInternal.tar -C /mnt4/'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt4/AppleInternal/'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt4/AppleInternal.tar'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt5/mobile/Library/Caches/com.apple.MobileGestalt.plist'
-                fi
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/Undecimus.app_disk0s1s1.tar.gz root@localhost:/mnt4/
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar -xzvf /mnt4/Undecimus.app_disk0s1s1.tar.gz -C /mnt4/Applications/"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt4/Applications/Undecimus.app'
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/System/Library/DataClassMigrators/SystemAppMigrator.migrator/"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv -v /mnt5/staged_system_apps/* /mnt4/Applications"
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.Collection.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.Collection.plist
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.plist
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/Certificates.bundle.tar.gz root@localhost:/mnt4/
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar --preserve-permissions -xzvf /mnt4/Certificates.bundle.tar.gz -C /mnt4/' 2> /dev/null
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/Security/Certificates.bundle/Info.plist "$dir"/$deviceid/$cpid/$version/Info.plist 2> /dev/null
-                cd "$dir"/$deviceid/$cpid/$version/
-                if [ "$os" = "Darwin" ]; then
-                    plutil -convert xml1 Info.plist
-                    cfbundleshortversionstring="$(/usr/bin/plutil -extract "CFBundleShortVersionString" xml1 -o - Info.plist | grep '<string>' | cut -d\> -f2 |cut -d\< -f1 | head -1)"
-                else
-                    plistutil -i Info.plist -f xml -o Info.plist
-                    cfbundleshortversionstring="$("$bin"/PlistBuddy -c "Print CFBundleShortVersionString" Info.plist | tr -d '"')"
-                fi
-                LC_ALL=C sed -i -e "s/$cfbundleshortversionstring/2022070700/g" Info.plist
-                if [ "$os" = "Darwin" ]; then
-                    plutil -convert binary1 Info.plist
-                else
-                    plistutil -i Info.plist -f bin -o Info.plist
-                fi
-                cd "$dir"/
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/Info.plist root@localhost:/mnt4/System/Library/Security/Certificates.bundle/Info.plist 2> /dev/null
-                if [[ "$version" == "11.3"* || "$version" == "11.4"* ]]; then
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
-                    "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -113
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
-                else
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
-                    "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -11
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
-                    if [[ -e "$dir"/$deviceid/0.0/activation_records/activation_record.plist ]]; then
-                        # [*] Alert
-                        # [*] If you boot now, you will get stuck at the \"screen time\" step in Setup.app
-                        # [*] You must delete Setup.app if you want to be able to use iOS/iPadOS $1
-                        # [*] See https://files.catbox.moe/96vhbl.mov for a video demonstration of the issue
-                        # [*] You will only see this message if activation_records are present for your device
-                        # Would you like to delete Setup.app? [y/n]:
-                        "$bin"/setuphelper.sh $version
-                    fi
-                fi
-            elif [[ "$version" == "12."* ]]; then
-                if [[ "$appleinternal" == 1 ]]; then
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/AppleInternal.tar root@localhost:/mnt4/
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/PrototypeTools.framework_ios12.tar root@localhost:/mnt4/
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/CoreServices/SystemVersion.plist "$dir"/$deviceid/$cpid/$version/SystemVersion.plist
-                    LC_ALL=C sed -i -e 's/<\/dict>/<key>ReleaseType<\/key><string>Internal<\/string><key>ProductType<\/key><string>Internal<\/string><\/dict>/g' "$dir"/$deviceid/$cpid/$version/SystemVersion.plist
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/SystemVersion.plist root@localhost:/mnt4/System/Library/CoreServices/SystemVersion.plist
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/SpringBoard-Internal.strings root@localhost:/mnt4/System/Library/CoreServices/SpringBoard.app/en.lproj/
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/SpringBoard-Internal.strings root@localhost:/mnt4/System/Library/CoreServices/SpringBoard.app/en_GB.lproj/
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.springboard_ios10.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.springboard.plist
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar -xvf /mnt4/PrototypeTools.framework_ios12.tar -C /mnt4/System/Library/PrivateFrameworks/'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt4/System/Library/PrivateFrameworks/PrototypeTools.framework'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt4/PrototypeTools.framework_ios12.tar'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar -xvf /mnt4/AppleInternal.tar -C /mnt4/'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt4/AppleInternal/'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt4/AppleInternal.tar'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt5/mobile/Library/Caches/com.apple.MobileGestalt.plist'
-                fi
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/Undecimus.app_disk0s1s1.tar.gz root@localhost:/mnt4/
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar -xzvf /mnt4/Undecimus.app_disk0s1s1.tar.gz -C /mnt4/Applications/"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/System/Library/DataClassMigrators/SystemAppMigrator.migrator/"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv -v /mnt5/staged_system_apps/* /mnt4/Applications"
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.Collection.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.Collection.plist
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.plist
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/Certificates.bundle.tar.gz root@localhost:/mnt4/
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar --preserve-permissions -xzvf /mnt4/Certificates.bundle.tar.gz -C /mnt4/' 2> /dev/null
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/Security/Certificates.bundle/Info.plist "$dir"/$deviceid/$cpid/$version/Info.plist 2> /dev/null
-                cd "$dir"/$deviceid/$cpid/$version/
-                if [ "$os" = "Darwin" ]; then
-                    plutil -convert xml1 Info.plist
-                    cfbundleshortversionstring="$(/usr/bin/plutil -extract "CFBundleShortVersionString" xml1 -o - Info.plist | grep '<string>' | cut -d\> -f2 |cut -d\< -f1 | head -1)"
-                else
-                    plistutil -i Info.plist -f xml -o Info.plist
-                    cfbundleshortversionstring="$("$bin"/PlistBuddy -c "Print CFBundleShortVersionString" Info.plist | tr -d '"')"
-                fi
-                LC_ALL=C sed -i -e "s/$cfbundleshortversionstring/2022070700/g" Info.plist
-                if [ "$os" = "Darwin" ]; then
-                    plutil -convert binary1 Info.plist
-                else
-                    plistutil -i Info.plist -f bin -o Info.plist
-                fi
-                cd "$dir"/
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
-                "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -12
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
-                if [[ -e "$dir"/$deviceid/0.0/activation_records/activation_record.plist ]]; then
-                    # [*] Alert
-                    # [*] If you boot now, you will get stuck at the \"screen time\" step in Setup.app
-                    # [*] You must delete Setup.app if you want to be able to use iOS/iPadOS $1
-                    # [*] See https://files.catbox.moe/96vhbl.mov for a video demonstration of the issue
-                    # [*] You will only see this message if activation_records are present for your device
-                    # Would you like to delete Setup.app? [y/n]:
-                    "$bin"/setuphelper.sh $version
-                fi
-            elif [[ "$version" == "13."* ]]; then
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/System/Library/DataClassMigrators/SystemAppMigrator.migrator/"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv -v /mnt5/staged_system_apps/* /mnt4/Applications"
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.Collection.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.Collection.plist
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.plist
-                #"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
-                #if [[ "$version" == "13.0"* || "$version" == "13.1"* || "$version" == "13.2"* || "$version" == "13.3"* ]]; then
-                #    "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -13
-                #else
-                #    "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -134
-                #fi
-                #"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv /mnt4/sbin/fsck /mnt4/sbin/fsckBackup"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv /mnt4/System/Library/Filesystems/apfs.fs /mnt4/System/Library/Filesystems/apfs.fsBackup"
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/apfs.fs_ios14.tar.gz root@localhost:/mnt4/
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar -xzvf /mnt4/apfs.fs_ios14.tar.gz -C /mnt4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/apfs.fs_ios14.tar.gz"
-            elif [[ "$version" == "14."* ]]; then
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/System/Library/DataClassMigrators/SystemAppMigrator.migrator/"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv -v /mnt5/staged_system_apps/* /mnt4/Applications"
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.Collection.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.Collection.plist
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.plist
-                #"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
-                #"$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -14
-                #"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
-            fi
-            if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram auto-boot=false" 2> /dev/null
-                pongo=0
-            fi
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt3" 2> /dev/null
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt4" 2> /dev/null
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt5" 2> /dev/null
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "bash -c mount_filesystems" 2> /dev/null
-            #"$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram oblit-inprogress=5"
+        elif [[ "$version" == "10.3"* || "$version" == "11."* ||  "$version" == "12."* || "$version" == "13."* || "$version" == "14."* ]]; then
+            cd "$dir"/$deviceid/$cpid/ramdisk/$r
+        elif [[ "$os" = "Darwin" && ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$version" == "9."* ]]; then
+            cd "$dir"/$deviceid/$cpid/ramdisk/9.3
         else
-            if [[ "$dualboot_hfs" == 1 ]]; then
-                remote_cmd "/sbin/mount -w -t hfs /dev/disk0s1s4 /mnt4 2> /dev/null" && {
-                    echo "[*] /dev/disk0s1s4 already exists and is hfs, skipping apfs to hfs code.."
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt4" 2> /dev/null
-                    sleep 2
-                } || {
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cat /gpt_hfs_dualboot.txt | gptfdisk /dev/rdisk0s1" 2> /dev/null
-                    sleep 2
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/bin/sync" 2> /dev/null
-                    sleep 1
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/bin/sync" 2> /dev/null
-                    sleep 1
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/bin/sync" 2> /dev/null
-                    sleep 1
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_hfs -s -v System -J -b 4096 -n a=4096,c=4096,e=4096 /dev/disk0s1s1"
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_hfs -s -v Data -J -b 4096 -n a=4096,c=4096,e=4096 /dev/disk0s1s2"
-                }
+            cd "$dir"/$deviceid/$cpid/ramdisk/11.4
+        fi
+        _boot_ramdisk $deviceid $replace $r
+        cd "$dir"/
+        read -p "[*] Press Enter once your device has fully booted into the SSH ramdisk. " r1
+        echo "[*] Waiting 6 seconds before continuing.."
+        sleep 6
+        sudo killall -STOP -c usbd
+        if [[ ! "$no_prompt_replug" == 1 ]]; then
+            read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+            if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                echo "[*] Waiting 10 seconds before continuing.."
+                sleep 10
+            elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                echo "[*] Ok no problem, continuing.."
             else
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cat /gpt.txt | gptfdisk /dev/rdisk0s1" 2> /dev/null
-                sleep 2
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/bin/sync" 2> /dev/null
-                sleep 1
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/bin/sync" 2> /dev/null
-                sleep 1
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/bin/sync" 2> /dev/null
-                sleep 1
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_hfs -s -v System -J -b 4096 -n a=4096,c=4096,e=4096 /dev/disk0s1s1"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_hfs -s -v Data -J -b 4096 -n a=4096,c=4096,e=4096 /dev/disk0s1s2"
+                echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                echo "[*] Waiting 10 seconds before continuing.."
+                sleep 10
             fi
-            if [[ "$dualboot_hfs" == 1 ]]; then
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_hfs -s -v SystemX -J -b 4096 -n a=4096,c=4096,e=4096 /dev/disk0s1s3"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/newfs_hfs -s -v DataX -J -b 4096 -n a=4096,c=4096,e=4096 /dev/disk0s1s4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s1 /mnt1" 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s2 /mnt2" 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s3 /mnt3" 2> /dev/null
-                if [[ ! "$hit" == 1 ]]; then
-                    echo "[*] Uploading "$dir"/$deviceid/0.0/mnt1.tar.gz, this may take up to 10 minutes.."
-                    "$bin"/pv "$dir"/$deviceid/0.0/mnt1.tar.gz | "$bin"/sshpass -p "alpine" ssh -p2222 root@localhost 'cat | tar xz -C /'
-                    echo "[*] Uploading "$dir"/jb/var.tar.gz, this may take up to 1 minute.."
-                    "$bin"/pv "$dir"/jb/var.tar.gz | "$bin"/sshpass -p "alpine" ssh -p2222 root@localhost 'cat | tar xz -C /mnt1/private/var'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv -v /mnt1/private/var/* /mnt2"
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt2/keybags"
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt2/log/asl/SweepStore" 2> /dev/null
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt2/mobile/Library/PreinstalledAssets/*" 2> /dev/null
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt2/mobile/Library/Preferences/.GlobalPreferences.plist" 2> /dev/null
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt2/mobile/.forward" 2> /dev/null
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/usr/standalone/firmware/FUD/AOP.img4 "$dir"/AOP.img4 2> /dev/null
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt1/usr/standalone/firmware/FUD/AOP.img4" 2> /dev/null
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/fstab root@localhost:/mnt1/etc/ 2> /dev/null
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt2/wireless/baseband_data"
-                    #if [ -e "$dir"/$deviceid/0.0/mnt3.tar.gz ]; then
-                    #    "$bin"/pv "$dir"/$deviceid/0.0/mnt3.tar.gz | "$bin"/sshpass -p "alpine" ssh -p2222 root@localhost 'cat | tar xz -C /mnt2/wireless/baseband_data'
-                    #fi
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
-                    echo "[*] Enabling NoMoreSIGABRT on /dev/disk0s1s2.."
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/bin/dd if=/dev/disk0s1s2 of=/mnt1/out.img bs=512 count=8192'
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/out.img "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.img
-                    "$bin"/Kernel64Patcher "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.img "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.patched -n
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.patched root@localhost:/mnt1/out.img
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/bin/dd if=/mnt1/out.img of=/dev/disk0s1s2 bs=512 count=8192'
-                    echo "[*] Done"
-                    echo "[*] Enabling fixkeybag and putting it where /usr/libexec/keybagd should be.."
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'cp /mnt1/usr/libexec/keybagd /mnt1/usr/libexec/keybagd.bak' 2> /dev/null
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/fixkeybag.bak root@localhost:/mnt1/usr/libexec/keybagd 2> /dev/null
-                    echo "[*] Done"
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt3/mnt1.tar.gz' 2> /dev/null
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt3/var.tar.gz' 2> /dev/null
-                fi
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt3" 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_hfs /dev/disk0s1s3 /mnt1" 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs -o suid,dev /dev/disk0s1s4 /mnt2" 2> /dev/null
-            else
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_hfs /dev/disk0s1s1 /mnt1" 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs -o suid,dev /dev/disk0s1s2 /mnt2" 2> /dev/null
-            fi
-            echo "[*] Uploading $dir/$deviceid/$cpid/$version/OS.tar, this may take up to 10 minutes.."
-            if [ "$os" = "Darwin" ]; then
-                "$bin"/pv "$dir"/$deviceid/$cpid/$version/OS.tar | "$bin"/sshpass -p "alpine" ssh -p2222 root@localhost 'cat | tar x -C /mnt1'
-            else
-                "$bin"/sshpass -p 'alpine' scp -o StrictHostKeyChecking=no -P 2222 -v "$dir"/$deviceid/$cpid/$version/rw.dmg root@localhost:/mnt2
-                disktomount="$("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/hdik /mnt2/rw.dmg' | tail -n 1 | cut -d ' ' -f 1)"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_hfs -o ro $disktomount /mnt3"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cp -av /mnt3/* /mnt1"
-                if [[ "$version" == "7."* || "$version" == "8."* ]]; then
-                    $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-                    sleep 5
-                    _kill_if_running iproxy
-                    echo "[*] Device should boot to Recovery mode. Please wait..."
-                    if [ "$os" = "Darwin" ]; then
-                        if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                            if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                                sleep 10
-                                if [ "$(get_device_mode)" = "recovery" ]; then
-                                    "$bin"/irecovery -c "setenv auto-boot true"
-                                    "$bin"/irecovery -c "saveenv"
-                                    "$bin"/dfuhelper.sh
-                                else
-                                    "$bin"/dfuhelper4.sh
-                                    sleep 5
-                                    "$bin"/irecovery -c "setenv auto-boot true"
-                                    "$bin"/irecovery -c "saveenv"
-                                    "$bin"/dfuhelper.sh
-                                fi
-                            elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                                "$bin"/dfuhelper2.sh
-                            else
-                                "$bin"/dfuhelper3.sh
-                            fi
-                        fi
-                    else
-                        if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                            if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                                sleep 10
-                                if [ "$(get_device_mode)" = "recovery" ]; then
-                                    "$bin"/irecovery -c "setenv auto-boot true"
-                                    "$bin"/irecovery -c "saveenv"
-                                    "$bin"/dfuhelper.sh
-                                else
-                                    "$bin"/dfuhelper4.sh
-                                    sleep 5
-                                    "$bin"/irecovery -c "setenv auto-boot true"
-                                    "$bin"/irecovery -c "saveenv"
-                                    "$bin"/dfuhelper.sh
-                                fi
-                            elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                                "$bin"/dfuhelper2.sh
-                            else
-                                "$bin"/dfuhelper3.sh
-                            fi
-                        fi
-                    fi
-                    _wait_for_dfu
-                    sudo killall -STOP -c usbd
-                    if [[ ! "$no_prompt_replug" == 1 ]]; then
-                        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                            echo "[*] Waiting 10 seconds before continuing.."
-                            sleep 10
-                        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                            echo "[*] Ok no problem, continuing.."
-                        else
-                            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                            echo "[*] Waiting 10 seconds before continuing.."
-                            sleep 10
-                        fi
-                    fi
-                    if [[ "$version" == "7."* || "$version" == "8."* ]]; then
-                        cd "$dir"/$deviceid/$cpid/ramdisk/8.4.1
-                    elif [[ "$version" == "10.3"* || "$version" == "11."* ||  "$version" == "12."* || "$version" == "13."* || "$version" == "14."* ]]; then
-                        cd "$dir"/$deviceid/$cpid/ramdisk/$r
-                    elif [[ "$os" = "Darwin" && ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$version" == "9."* ]]; then
-                        cd "$dir"/$deviceid/$cpid/ramdisk/9.3
-                    else
-                        cd "$dir"/$deviceid/$cpid/ramdisk/11.4
-                    fi
-                    _boot_ramdisk $deviceid $replace $r
-                    cd "$dir"/
-                    read -p "[*] Press Enter once your device has fully booted into the SSH ramdisk. " r1
-                    echo "[*] Waiting 6 seconds before continuing.."
-                    sleep 6
-                    sudo killall -STOP -c usbd
-                    if [[ ! "$no_prompt_replug" == 1 ]]; then
-                        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                            echo "[*] Waiting 10 seconds before continuing.."
-                            sleep 10
-                        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                            echo "[*] Ok no problem, continuing.."
-                        else
-                            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                            echo "[*] Waiting 10 seconds before continuing.."
-                            sleep 10
-                        fi
-                    fi
-                    "$bin"/iproxy 2222 22 &
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/sbin/fsck'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_hfs /dev/disk0s1s1 /mnt1" 2> /dev/null
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs -o suid,dev /dev/disk0s1s2 /mnt2" 2> /dev/null
-                fi
-            fi
+        fi
+        "$bin"/iproxy 2222 22 &
+        systemfs="disk0s1s1"
+        datafs="disk0s1s2"
+        if [[ "$version" == "7."* || "$version" == "8."* || "$version" == "9."* ]]; then
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_hfs /dev/disk0s1s1 /mnt1" 2> /dev/null
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs -o suid,dev /dev/disk0s1s2 /mnt2" 2> /dev/null
             if [[ "$version" == "7."* || "$version" == "8."* ]]; then
                 "$bin"/sshpass -p 'alpine' scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/cydia_ios7.tar.gz root@localhost:/mnt2 2> /dev/null
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar -xzvf /mnt2/cydia_ios7.tar.gz -C /mnt1"
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt2/cydia_ios7.tar.gz" 2> /dev/null
             fi
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv -v /mnt1/private/var/* /mnt2"
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt1/usr/local/standalone/firmware/Baseband" 2> /dev/null
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir /mnt2/keybags" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt2/wireless/baseband_data" 2> /dev/null
-            if [[ "$fuck" == 1 || "$r" == "16."* || "$r" == "17."* ]]; then
-                echo "[*] Enabling fixkeybag and putting it where /usr/libexec/keybagd should be.."
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'cp /mnt1/usr/libexec/keybagd /mnt1/usr/libexec/keybagd.bak' 2> /dev/null
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/fixkeybag root@localhost:/mnt1/usr/libexec/keybagd 2> /dev/null
-                echo "[*] Done"
-            else
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 "$dir"/$deviceid/0.0/keybags root@localhost:/mnt2 2> /dev/null
-            fi
             if [ -e "$dir"/$deviceid/0.0/Baseband ]; then
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 "$dir"/$deviceid/0.0/Baseband root@localhost:/mnt1/usr/local/standalone/firmware 2> /dev/null
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags -R schg /mnt1/usr/local/standalone/firmware/Baseband"
@@ -4147,80 +2715,13 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 "$dir"/$deviceid/0.0/activation_records/* root@localhost:/mnt2/mobile/Library/mad/activation_records 2> /dev/null
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags -R schg /mnt2/mobile/Library/mad/activation_records"
             fi
-            if [[ "$version" == "10."* ]]; then
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/data_ark.plist_ios10.tar root@localhost:/mnt2/
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar -xvf /mnt2/data_ark.plist_ios10.tar -C /mnt2"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt2/data_ark.plist_ios10.tar"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt2/root/Library/Lockdown/device_private_key.pem"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt2/root/Library/Lockdown/device_public_key.pem"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt2/root/Library/Lockdown/escrow_records"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt2/root/Library/Lockdown/pair_records"
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/usr/libexec/mobileactivationd "$dir"/$deviceid/$cpid/$version/mobactivationd.raw
-                if [[ ! -e "$dir"/$deviceid/0.0/activation_records/activation_record.plist || "$force_activation" == 1 ]]; then
-                    "$bin"/mobactivationd64patcher "$dir"/$deviceid/$cpid/$version/mobactivationd.raw "$dir"/$deviceid/$cpid/$version/mobactivationd.patched -b -c -d
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/mobactivationd.patched root@localhost:/mnt1/usr/libexec/mobileactivationd
-                fi
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.saurik.Cydia.Startup.plist root@localhost:/mnt1/System/Library/LaunchDaemons
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/chown root:wheel /mnt1/System/Library/LaunchDaemons/com.saurik.Cydia.Startup.plist"
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/kernelcache root@localhost:/mnt1/System/Library/Caches/com.apple.kernelcaches
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "touch /mnt1/.cydia_no_stash"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/chown root:wheel /mnt1/.cydia_no_stash"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "chmod 777 /mnt1/.cydia_no_stash"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt1/usr/lib/libmis.dylib"
-                if [[ "$appleinternal" == 1 ]]; then
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/AppleInternal.tar root@localhost:/mnt1/
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/PrototypeTools.framework_ios10.tar root@localhost:/mnt1/
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/System/Library/CoreServices/SystemVersion.plist "$dir"/$deviceid/$cpid/$version/SystemVersion.plist
-                    LC_ALL=C sed -i -e 's/<\/dict>/<key>ReleaseType<\/key><string>Internal<\/string><key>ProductType<\/key><string>Internal<\/string><\/dict>/g' "$dir"/$deviceid/$cpid/$version/SystemVersion.plist
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/SystemVersion.plist root@localhost:/mnt1/System/Library/CoreServices/SystemVersion.plist
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/SpringBoard-Internal.strings root@localhost:/mnt1/System/Library/CoreServices/SpringBoard.app/en.lproj/
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/SpringBoard-Internal.strings root@localhost:/mnt1/System/Library/CoreServices/SpringBoard.app/en_GB.lproj/
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.springboard_ios10.plist root@localhost:/mnt2/mobile/Library/Preferences/com.apple.springboard.plist
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar -xvf /mnt1/PrototypeTools.framework_ios10.tar -C /mnt1/System/Library/PrivateFrameworks/'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt1/System/Library/PrivateFrameworks/PrototypeTools.framework'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/PrototypeTools.framework_ios10.tar'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar -xvf /mnt1/AppleInternal.tar -C /mnt1/'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt1/AppleInternal/'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/AppleInternal.tar'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt2/mobile/Library/Caches/com.apple.MobileGestalt.plist'
-                fi
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/Meridian.app.tar.gz root@localhost:/mnt1/
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar --preserve-permissions -xzvf /mnt1/Meridian.app.tar.gz -C /mnt1/Applications' 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/Meridian.app.tar.gz' 2> /dev/null
-                if [[ ! "$deviceid" == "iPad"* ]]; then
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/UnlimFileManager.app.tar.gz root@localhost:/mnt1/
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar --preserve-permissions -xzvf /mnt1/UnlimFileManager.app.tar.gz -C /mnt1/Applications' 2> /dev/null
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt1/Applications/UnlimFileManager.app'
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/UnlimFileManager.app.tar.gz' 2> /dev/null
-                fi
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/System/Library/DataClassMigrators/MobileNotes.migrator/' 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/System/Library/DataClassMigrators/MobileSlideShow.migrator/' 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/System/Library/DataClassMigrators/HealthMigrator.migrator/' 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/System/Library/DataClassMigrators/rolldMigrator.migrator//' 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/System/Library/DataClassMigrators/BuddyMigrator.migrator/' 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/System/Library/DataClassMigrators/Calendar.migrator/' 2> /dev/null
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/aopfw.img4 root@localhost:/mnt1/usr/standalone/firmware/FUD/AOP.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/homerfw.img4 root@localhost:/mnt1/usr/standalone/firmware/FUD/Homer.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/avefw.img4 root@localhost:/mnt1/usr/standalone/firmware/FUD/AVE.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/trustcache root@localhost:/mnt1/usr/standalone/firmware/FUD/StaticTrustCache.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/multitouch.img4 root@localhost:/mnt1/usr/standalone/firmware/FUD/Multitouch.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/audiocodecfirmware.img4 root@localhost:/mnt1/usr/standalone/firmware/FUD/AudioCodecFirmware.img4
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/AOP.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/Homer.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/AVE.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/StaticTrustCache.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/Multitouch.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/AudioCodecFirmware.img4"
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
-                "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -10
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt1/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
-            else
+            if [[ ! "$version" == "10."* ]]; then
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/data_ark.plist_ios7.tar root@localhost:/mnt2/ 2> /dev/null
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar -xvf /mnt2/data_ark.plist_ios7.tar -C /mnt2" 2> /dev/null
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt2/data_ark.plist_ios7.tar" 2> /dev/null
             fi
             if [[ "$version" == "7."* || "$version" == "8."* ]]; then
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/fstab_rw root@localhost:/mnt1/etc/fstab 2> /dev/null
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/fstab_rw root@localhost:/mnt1/etc/fstab 2> /dev/null
             else
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/fstab root@localhost:/mnt1/etc/ 2> /dev/null
             fi
@@ -4387,397 +2888,345 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             if [[ "$version" == "9."* ]]; then
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram -c" 2> /dev/null
             fi
-            if [[ "$dualboot_hfs" == 1 && ! "$hit" == 1 ]]; then
-                _download_clean_boot_files $deviceid $replace $r
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram auto-boot=false" 2> /dev/null
-                $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-                echo "[*] Step 1 of dualbooting to iOS/iPadOS $version is now done"
-                echo "[*] The device should now boot into recovery mode"
-                echo "[*] Please follow the on screen instructions to put your device back into dfu mode"
-                echo "[*] We will try to boot iOS/iPadOS $r to generate new keybags for your device"
-                sleep 5
-                _kill_if_running iproxy
-                if [ "$os" = "Darwin" ]; then
-                    if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                        if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                            sleep 10
-                            if [ "$(get_device_mode)" = "recovery" ]; then
-                                "$bin"/dfuhelper.sh
-                            else
-                                "$bin"/dfuhelper4.sh
-                                sleep 5
-                                "$bin"/irecovery -c "setenv auto-boot false"
-                                "$bin"/irecovery -c "saveenv"
-                                "$bin"/dfuhelper.sh
-                            fi
-                        elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                            "$bin"/dfuhelper2.sh
-                        else
-                            "$bin"/dfuhelper3.sh
-                        fi
-                    fi
-                else
-                    if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                        if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                            sleep 10
-                            if [ "$(get_device_mode)" = "recovery" ]; then
-                                "$bin"/dfuhelper.sh
-                            else
-                                "$bin"/dfuhelper4.sh
-                                sleep 5
-                                "$bin"/irecovery -c "setenv auto-boot false"
-                                "$bin"/irecovery -c "saveenv"
-                                "$bin"/dfuhelper.sh
-                            fi
-                        elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                            "$bin"/dfuhelper2.sh
-                        else
-                            "$bin"/dfuhelper3.sh
-                        fi
-                    fi
+        else
+            if [[ "$version" == "10.3"* || "$version" == "11."* || "$version" == "12."* || "$version" == "13."* || "$version" == "14."* ]]; then
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/$systemfs /mnt4"
+                if [[ "$version" == "11."* || "$version" == "12."* || "$version" == "13."* || "$version" == "14."* ]]; then
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/snaputil -n $(/usr/bin/snaputil -l /mnt4) orig-fs /mnt4"
                 fi
-                _wait_for_dfu
-                sudo killall -STOP -c usbd
-                if [[ ! "$no_prompt_replug" == 1 ]]; then
-                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                        echo "[*] Ok no problem, continuing.."
-                    else
-                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    fi
-                fi
-                cd "$dir"/$deviceid/clean/$cpid/$r
-                _boot
-                cd "$dir"/
-                echo "[*] Step 2 of dualbooting to iOS/iPadOS $version is now done"
-                echo '[*] The device should now show a bunch of AppleKeyStore: operation failed (pid: %d sel: %d ret: %x)'
-                echo "[*] Please follow the on screen instructions to put your device back into dfu mode"
-                echo "[*] We will then boot into a ramdisk to fixup iOS/iPadOS $r to allow it to be booted again as normal"
-                sleep 5
-                if [ "$os" = "Darwin" ]; then
-                    if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                        if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                            sleep 10
-                            if [ "$(get_device_mode)" = "recovery" ]; then
-                                "$bin"/dfuhelper.sh
-                            else
-                                "$bin"/dfuhelper4.sh
-                                sleep 5
-                                "$bin"/irecovery -c "setenv auto-boot false"
-                                "$bin"/irecovery -c "saveenv"
-                                "$bin"/dfuhelper.sh
-                            fi
-                        elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                            "$bin"/dfuhelper2.sh
-                        else
-                            "$bin"/dfuhelper3.sh
-                        fi
-                    fi
-                else
-                    if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                        if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                            sleep 10
-                            if [ "$(get_device_mode)" = "recovery" ]; then
-                                "$bin"/dfuhelper.sh
-                            else
-                                "$bin"/dfuhelper4.sh
-                                sleep 5
-                                "$bin"/irecovery -c "setenv auto-boot false"
-                                "$bin"/irecovery -c "saveenv"
-                                "$bin"/dfuhelper.sh
-                            fi
-                        elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                            "$bin"/dfuhelper2.sh
-                        else
-                            "$bin"/dfuhelper3.sh
-                        fi
-                    fi
-                fi
-                _wait_for_dfu
-                sudo killall -STOP -c usbd
-                if [[ ! "$no_prompt_replug" == 1 ]]; then
-                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                        echo "[*] Ok no problem, continuing.."
-                    else
-                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    fi
-                fi
-                if [[ "$version" == "7."* || "$version" == "8."* ]]; then
-                    cd "$dir"/$deviceid/$cpid/ramdisk/8.4.1
-                elif [[ "$version" == "10.3"* || "$version" == "11."* ||  "$version" == "12."* ||  "$version" == "13."* || "$version" == "14."* ]]; then
-                    cd "$dir"/$deviceid/$cpid/ramdisk/$r
-                elif [[ "$os" = "Darwin" && ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$version" == "9."* ]]; then
-                    cd "$dir"/$deviceid/$cpid/ramdisk/9.3
-                else
-                    cd "$dir"/$deviceid/$cpid/ramdisk/11.4
-                fi
-                _boot_ramdisk $deviceid $replace $r
-                cd "$dir"/
-                read -p "[*] Press Enter once your device has fully booted into the SSH ramdisk " r1
-                echo "[*] Waiting 6 seconds before continuing.."
-                sleep 6
-                sudo killall -STOP -c usbd
-                if [[ ! "$no_prompt_replug" == 1 ]]; then
-                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                        echo "[*] Ok no problem, continuing.."
-                    else
-                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    fi
-                fi
-                "$bin"/iproxy 2222 22 &
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s1 /mnt1" 2> /dev/null
-                echo "[*] Disabling fixkeybag and putting back stock /usr/libexec/keybagd.."
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'mv /mnt1/usr/libexec/keybagd /mnt1/usr/libexec/fixkeybag' 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'mv /mnt1/usr/libexec/keybagd.bak /mnt1/usr/libexec/keybagd' 2> /dev/null
-                echo "[*] Done"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram auto-boot=false" 2> /dev/null
-                $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-                echo "[*] Step 3 of dualbooting to iOS/iPadOS $version is now done"
-                echo "[*] The device should now boot into recovery mode"
-                echo "[*] Please follow the on screen instructions to put your device back into dfu mode"
-                echo "[*] We will try to boot iOS/iPadOS $r for the first time with hfs filesystem on your device"
-                sleep 5
-                _kill_if_running iproxy
-                if [ "$os" = "Darwin" ]; then
-                    if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                        if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                            sleep 10
-                            if [ "$(get_device_mode)" = "recovery" ]; then
-                                "$bin"/dfuhelper.sh
-                            else
-                                "$bin"/dfuhelper4.sh
-                                sleep 5
-                                "$bin"/irecovery -c "setenv auto-boot false"
-                                "$bin"/irecovery -c "saveenv"
-                                "$bin"/dfuhelper.sh
-                            fi
-                        elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                            "$bin"/dfuhelper2.sh
-                        else
-                            "$bin"/dfuhelper3.sh
-                        fi
-                    fi
-                else
-                    if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                        if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                            sleep 10
-                            if [ "$(get_device_mode)" = "recovery" ]; then
-                                "$bin"/dfuhelper.sh
-                            else
-                                "$bin"/dfuhelper4.sh
-                                sleep 5
-                                "$bin"/irecovery -c "setenv auto-boot false"
-                                "$bin"/irecovery -c "saveenv"
-                                "$bin"/dfuhelper.sh
-                            fi
-                        elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                            "$bin"/dfuhelper2.sh
-                        else
-                            "$bin"/dfuhelper3.sh
-                        fi
-                    fi
-                fi
-                _wait_for_dfu
-                sudo killall -STOP -c usbd
-                if [[ ! "$no_prompt_replug" == 1 ]]; then
-                    read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                    if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                        echo "[*] Ok no problem, continuing.."
-                    else
-                        echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                        read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                        echo "[*] Waiting 10 seconds before continuing.."
-                        sleep 10
-                    fi
-                fi
-                cd "$dir"/$deviceid/clean/$cpid/$r
-                _boot
-                cd "$dir"/
-                if [[ "$version" == "7."* ]]; then
-                    echo "[*] Step 4 of dualbooting to iOS/iPadOS $version is now done"
-                    echo "[*] The device should now boot into the setup screen on iOS/iPadOS $r"
-                    echo "[*] You should wait until you get to setup screen before next step"
-                    echo "[*] Then follow the on screen instructions to put your device back into dfu mode"
-                    echo "[*] We will then boot into a ramdisk to run fsck before booting iOS/iPadOS $version"
-                    sleep 5
-                    if [ "$os" = "Darwin" ]; then
-                        if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                            if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                                sleep 10
-                                if [ "$(get_device_mode)" = "recovery" ]; then
-                                    "$bin"/dfuhelper.sh
-                                else
-                                    "$bin"/dfuhelper4.sh
-                                    sleep 5
-                                    "$bin"/irecovery -c "setenv auto-boot false"
-                                    "$bin"/irecovery -c "saveenv"
-                                    "$bin"/dfuhelper.sh
-                                fi
-                            elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                                "$bin"/dfuhelper2.sh
-                            else
-                                "$bin"/dfuhelper3.sh
-                            fi
-                        fi
-                    else
-                        if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                            if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                                sleep 10
-                                if [ "$(get_device_mode)" = "recovery" ]; then
-                                    "$bin"/dfuhelper.sh
-                                else
-                                    "$bin"/dfuhelper4.sh
-                                    sleep 5
-                                    "$bin"/irecovery -c "setenv auto-boot false"
-                                    "$bin"/irecovery -c "saveenv"
-                                    "$bin"/dfuhelper.sh
-                                fi
-                            elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                                "$bin"/dfuhelper2.sh
-                            else
-                                "$bin"/dfuhelper3.sh
-                            fi
-                        fi
-                    fi
-                    _wait_for_dfu
-                    sudo killall -STOP -c usbd
-                    if [[ ! "$no_prompt_replug" == 1 ]]; then
-                        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                            echo "[*] Waiting 10 seconds before continuing.."
-                            sleep 10
-                        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                            echo "[*] Ok no problem, continuing.."
-                        else
-                            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                            echo "[*] Waiting 10 seconds before continuing.."
-                            sleep 10
-                        fi
-                    fi
-                    if [[ "$version" == "7."* || "$version" == "8."* ]]; then
-                        cd "$dir"/$deviceid/$cpid/ramdisk/8.4.1
-                    elif [[ "$version" == "10.3"* || "$version" == "11."* ||  "$version" == "12."* ||  "$version" == "13."* || "$version" == "14."* ]]; then
-                        cd "$dir"/$deviceid/$cpid/ramdisk/$r
-                    elif [[ "$os" = "Darwin" && ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$version" == "9."* ]]; then
-                        cd "$dir"/$deviceid/$cpid/ramdisk/9.3
-                    else
-                        cd "$dir"/$deviceid/$cpid/ramdisk/11.4
-                    fi
-                    _boot_ramdisk $deviceid $replace $r
-                    cd "$dir"/
-                    read -p "[*] Press Enter once your device has fully booted into the SSH ramdisk " r1
-                    echo "[*] Waiting 6 seconds before continuing.."
-                    sleep 6
-                    sudo killall -STOP -c usbd
-                    if [[ ! "$no_prompt_replug" == 1 ]]; then
-                        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-                        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                            echo "[*] Waiting 10 seconds before continuing.."
-                            sleep 10
-                        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-                            echo "[*] Ok no problem, continuing.."
-                        else
-                            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-                            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-                            echo "[*] Waiting 10 seconds before continuing.."
-                            sleep 10
-                        fi
-                    fi
-                    "$bin"/iproxy 2222 22 &
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/sbin/fsck'
-                    echo "[*] Done"
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram auto-boot=false" 2> /dev/null
-                    $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-                    echo "[*] Step 5 of dualbooting to iOS/iPadOS $version is now done"
-                    echo "[*] The device should now boot into recovery mode"
-                    echo "[*] Please follow the on screen instructions to put your device back into dfu mode"
-                    echo "[*] We will try to boot iOS/iPadOS $version for the first time on your device"
-                    echo "[*] You can enable auto-boot again at any time by running $0 $r --fix-auto-boot"
-                    sleep 5
-                else
-                    echo "[*] Step 4 of dualbooting to iOS/iPadOS $version is now done"
-                    echo "[*] The device should now boot into the setup screen on iOS/iPadOS $r"
-                    echo "[*] Please follow the on screen instructions to put your device back into dfu mode"
-                    echo "[*] We will try to boot iOS/iPadOS $version for the first time on your device"
-                    sleep 5
-                fi
-
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/$datafs /mnt5"
+            else
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_hfs /dev/disk0s1s1 /mnt4" 2> /dev/null
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs -o suid,dev /dev/disk0s1s2 /mnt5" 2> /dev/null
             fi
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt4/usr/local/standalone/firmware/Baseband"
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt5/wireless/baseband_data"
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt4/private/xarts"
+            if [[ "$version" == "13."* || "$version" == "14."* ]]; then
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt4/private/preboot"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt4" 2> /dev/null
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt5" 2> /dev/null
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "bash -c mount_filesystems" 2> /dev/null
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt4" 2> /dev/null
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt5" 2> /dev/null
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/$systemfs /mnt4"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/$datafs /mnt5"
+            fi
+            if [[ "$version" == "14."* ]]; then
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/$prebootfs /mnt4/private/preboot"
+            fi
+            if [[ "$version" == "13."* || "$version" == "14."* ]]; then
+                has_active=$(remote_cmd "ls /mnt6/active" 2> /dev/null)
+                if [ ! "$has_active" = "/mnt6/active" ]; then
+                    echo "[!] Active file does not exist! Please use SSH to create it"
+                    echo "    /mnt6/active should contain the name of the UUID in /mnt6"
+                    echo "    When done, type reboot in the SSH session, then rerun the script"
+                    echo "    ssh root@localhost -p 2222"
+                    $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
+                    _kill_if_running iproxy
+                    exit 0
+                fi
+                active=$(remote_cmd "cat /mnt6/active" 2> /dev/null)
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cp -na /mnt6/* /mnt4/private/preboot"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags -R noschg /mnt4/private/preboot/*"
+                if [[ ! "$version" == "14."* ]]; then
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/aopfw.img4 root@localhost:/mnt4/private/preboot/$active/usr/standalone/firmware/FUD/AOP.img4
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/AOP.img4"
+                else
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/AOP.img4"
+                fi
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/homerfw.img4 root@localhost:/mnt4/private/preboot/$active/usr/standalone/firmware/FUD/Homer.img4
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/trustcache root@localhost:/mnt4/private/preboot/$active/usr/standalone/firmware/FUD/StaticTrustCache.img4
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/multitouch.img4 root@localhost:/mnt4/private/preboot/$active/usr/standalone/firmware/FUD/Multitouch.img4
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/audiocodecfirmware.img4 root@localhost:/mnt4/private/preboot/$active/usr/standalone/firmware/FUD/AudioCodecFirmware.img4
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/ispfw.img4 root@localhost:/mnt4/private/preboot/$active/usr/standalone/firmware/FUD/ISP.img4
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/ISP.img4"
+                # ios 15
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/AVE.img4"
+                # stop ios from deleting our files
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/ISP.img4"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/Homer.img4"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/StaticTrustCache.img4"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/Multitouch.img4"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/private/preboot/$active/usr/standalone/firmware/FUD/AudioCodecFirmware.img4"
+            fi
+            if [ -e "$dir"/$deviceid/0.0/Baseband ]; then
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 "$dir"/$deviceid/0.0/Baseband root@localhost:/mnt4/usr/local/standalone/firmware
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags -R schg /mnt4/usr/local/standalone/firmware/Baseband"
+            fi
+            "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/apticket.der root@localhost:/mnt4/System/Library/Caches/
+            "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/sep-firmware.img4 root@localhost:/mnt4/usr/standalone/firmware/
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/usr/standalone/firmware/sep-firmware.img4"
+            if [ -e "$dir"/$deviceid/0.0/FUD ]; then
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt4/usr/standalone/firmware/FUD"
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 "$dir"/$deviceid/0.0/FUD/* root@localhost:/mnt4/usr/standalone/firmware/FUD
+            fi
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rv /mnt4/System/Library/Caches/com.apple.factorydata"
+            if [ -e "$dir"/$deviceid/0.0/com.apple.factorydata ]; then
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt4/System/Library/Caches/com.apple.factorydata"
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 "$dir"/$deviceid/0.0/com.apple.factorydata/* root@localhost:/mnt4/System/Library/Caches/com.apple.factorydata
+            fi
+            if [ -e "$dir"/$deviceid/0.0/IC-Info.sisv ]; then
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt5/mobile/Library/FairPlay/iTunes_Control/iTunes/"
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/IC-Info.sisv root@localhost:/mnt5/mobile/Library/FairPlay/iTunes_Control/iTunes/IC-Info.sisv 2> /dev/null
+            fi
+            if [ -e "$dir"/$deviceid/0.0/com.apple.commcenter.device_specific_nobackup.plist ]; then
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt5/wireless/Library/Preferences/"
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/com.apple.commcenter.device_specific_nobackup.plist root@localhost:/mnt5/wireless/Library/Preferences/com.apple.commcenter.device_specific_nobackup.plist 2> /dev/null
+            fi
+            "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/data_ark.plist_ios10.tar root@localhost:/mnt5/
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar -xvf /mnt5/data_ark.plist_ios10.tar -C /mnt5"
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt5/data_ark.plist_ios10.tar"
+            "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/usr/libexec/mobileactivationd "$dir"/$deviceid/$cpid/$version/mobactivationd.raw
+            if [[ ! -e "$dir"/$deviceid/0.0/activation_records/activation_record.plist || "$force_activation" == 1 ]]; then
+                "$bin"/mobactivationd64patcher "$dir"/$deviceid/$cpid/$version/mobactivationd.raw "$dir"/$deviceid/$cpid/$version/mobactivationd.patched -b -c -d
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/mobactivationd.patched root@localhost:/mnt4/usr/libexec/mobileactivationd
+            fi
+            "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/kernelcache root@localhost:/mnt4/System/Library/Caches/com.apple.kernelcaches
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/usr/lib/libmis.dylib"
+            if [[ ! "$version" == "14."* ]]; then
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/aopfw.img4 root@localhost:/mnt4/usr/standalone/firmware/FUD/AOP.img4
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/usr/standalone/firmware/FUD/AOP.img4"
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/homerfw.img4 root@localhost:/mnt4/usr/standalone/firmware/FUD/Homer.img4
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/trustcache root@localhost:/mnt4/usr/standalone/firmware/FUD/StaticTrustCache.img4
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/multitouch.img4 root@localhost:/mnt4/usr/standalone/firmware/FUD/Multitouch.img4
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/audiocodecfirmware.img4 root@localhost:/mnt4/usr/standalone/firmware/FUD/AudioCodecFirmware.img4
+                if [[ "$version" == "13."* ]]; then
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/ispfw.img4 root@localhost:/mnt4/usr/standalone/firmware/FUD/ISP.img4
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/usr/standalone/firmware/FUD/ISP.img4"
+                else
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/usr/standalone/firmware/FUD/ISP.img4"
+                fi
+                # ios 15
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/usr/standalone/firmware/FUD/AVE.img4"
+                # stop ios from deleting our files
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/usr/standalone/firmware/FUD/ISP.img4"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/usr/standalone/firmware/FUD/Homer.img4"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/usr/standalone/firmware/FUD/StaticTrustCache.img4"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/usr/standalone/firmware/FUD/Multitouch.img4"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt4/usr/standalone/firmware/FUD/AudioCodecFirmware.img4"
+            fi
+            # fix stuck on apple logo after long progress bar
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/System/Library/DataClassMigrators/CoreLocationMigrator.migrator/"
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/System/Library/DataClassMigrators/PassbookDataMigrator.migrator/"
+            if [[ -e "$dir"/$deviceid/0.0/activation_records && ! "$force_activation" == 1 ]]; then
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt5/root/Library/Lockdown/activation_records"
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 "$dir"/$deviceid/0.0/activation_records/* root@localhost:/mnt5/root/Library/Lockdown/activation_records 2> /dev/null
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags -R schg /mnt5/root/Library/Lockdown/activation_records"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt5/mobile/Library/mad/activation_records"
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 "$dir"/$deviceid/0.0/activation_records/* root@localhost:/mnt5/mobile/Library/mad/activation_records 2> /dev/null
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags -R schg /mnt5/mobile/Library/mad/activation_records"
+            fi
+            if [[ -e "$dir"/$deviceid/0.0/activation_records/activation_record.plist && ! "$force_activation" == 1 ]]; then
+                if [ -e "$dir"/$deviceid/0.0/data_ark.plist ]; then
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/data_ark.plist root@localhost:/mnt5/root/Library/Lockdown/data_ark.plist 2> /dev/null
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt5/root/Library/Lockdown/data_ark.plist"
+                fi
+            fi
+            if [[ "$version" == "10."* ]]; then
+                if [[ "$appleinternal" == 1 ]]; then
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/AppleInternal.tar root@localhost:/mnt4/
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/PrototypeTools.framework_ios10.tar root@localhost:/mnt4/
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/CoreServices/SystemVersion.plist "$dir"/$deviceid/$cpid/$version/SystemVersion.plist
+                    LC_ALL=C sed -i -e 's/<\/dict>/<key>ReleaseType<\/key><string>Internal<\/string><key>ProductType<\/key><string>Internal<\/string><\/dict>/g' "$dir"/$deviceid/$cpid/$version/SystemVersion.plist
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/SystemVersion.plist root@localhost:/mnt4/System/Library/CoreServices/SystemVersion.plist
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/SpringBoard-Internal.strings root@localhost:/mnt4/System/Library/CoreServices/SpringBoard.app/en.lproj/
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/SpringBoard-Internal.strings root@localhost:/mnt4/System/Library/CoreServices/SpringBoard.app/en_GB.lproj/
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.springboard_ios10.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.springboard.plist
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar -xvf /mnt4/PrototypeTools.framework_ios10.tar -C /mnt4/System/Library/PrivateFrameworks/'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt4/System/Library/PrivateFrameworks/PrototypeTools.framework'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt4/PrototypeTools.framework_ios10.tar'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar -xvf /mnt4/AppleInternal.tar -C /mnt4/'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt4/AppleInternal/'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt4/AppleInternal.tar'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt5/mobile/Library/Caches/com.apple.MobileGestalt.plist'
+                fi
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/Meridian.app.tar.gz root@localhost:/mnt4/
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar --preserve-permissions -xzvf /mnt4/Meridian.app.tar.gz -C /mnt4/Applications' 2> /dev/null
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt4/Meridian.app.tar.gz' 2> /dev/null
+                if [[ ! "$deviceid" == "iPad"* ]]; then
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/UnlimFileManager.app.tar.gz root@localhost:/mnt4/
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar --preserve-permissions -xzvf /mnt4/UnlimFileManager.app.tar.gz -C /mnt4/Applications' 2> /dev/null
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt4/Applications/UnlimFileManager.app'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt4/UnlimFileManager.app.tar.gz' 2> /dev/null
+                fi
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'mkdir -p /mnt5/mobile/Library/Preferences' 2> /dev/null
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.Collection.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.Collection.plist
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.plist
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
+                if [[ "$version" == "10.3"* ]]; then
+                    "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -103
+                else
+                    "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -10
+                fi
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
+                #"$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'cp /mnt4/usr/libexec/keybagd /mnt4/usr/libexec/keybagd.bak' 2> /dev/null
+                #"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/fixkeybag root@localhost:/mnt4/usr/libexec/keybagd 2> /dev/null
+            elif [[ "$version" == "11."* ]]; then
+                if [[ "$appleinternal" == 1 ]]; then
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/AppleInternal.tar root@localhost:/mnt4/
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/PrototypeTools.framework_ios11.tar root@localhost:/mnt4/
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/CoreServices/SystemVersion.plist "$dir"/$deviceid/$cpid/$version/SystemVersion.plist
+                    LC_ALL=C sed -i -e 's/<\/dict>/<key>ReleaseType<\/key><string>Internal<\/string><key>ProductType<\/key><string>Internal<\/string><\/dict>/g' "$dir"/$deviceid/$cpid/$version/SystemVersion.plist
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/SystemVersion.plist root@localhost:/mnt4/System/Library/CoreServices/SystemVersion.plist
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/SpringBoard-Internal.strings root@localhost:/mnt4/System/Library/CoreServices/SpringBoard.app/en.lproj/
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/SpringBoard-Internal.strings root@localhost:/mnt4/System/Library/CoreServices/SpringBoard.app/en_GB.lproj/
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.springboard_ios10.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.springboard.plist
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar -xvf /mnt4/PrototypeTools.framework_ios11.tar -C /mnt4/System/Library/PrivateFrameworks/'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt4/System/Library/PrivateFrameworks/PrototypeTools.framework'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt4/PrototypeTools.framework_ios11.tar'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar -xvf /mnt4/AppleInternal.tar -C /mnt4/'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt4/AppleInternal/'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt4/AppleInternal.tar'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt5/mobile/Library/Caches/com.apple.MobileGestalt.plist'
+                fi
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/Undecimus.app_disk0s1s1.tar.gz root@localhost:/mnt4/
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar -xzvf /mnt4/Undecimus.app_disk0s1s1.tar.gz -C /mnt4/Applications/"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt4/Applications/Undecimus.app'
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/System/Library/DataClassMigrators/SystemAppMigrator.migrator/"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv -v /mnt5/staged_system_apps/* /mnt4/Applications"
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.Collection.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.Collection.plist
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.plist
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/Certificates.bundle.tar.gz root@localhost:/mnt4/
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar --preserve-permissions -xzvf /mnt4/Certificates.bundle.tar.gz -C /mnt4/' 2> /dev/null
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/Security/Certificates.bundle/Info.plist "$dir"/$deviceid/$cpid/$version/Info.plist 2> /dev/null
+                cd "$dir"/$deviceid/$cpid/$version/
+                if [ "$os" = "Darwin" ]; then
+                    plutil -convert xml1 Info.plist
+                    cfbundleshortversionstring="$(/usr/bin/plutil -extract "CFBundleShortVersionString" xml1 -o - Info.plist | grep '<string>' | cut -d\> -f2 |cut -d\< -f1 | head -1)"
+                else
+                    plistutil -i Info.plist -f xml -o Info.plist
+                    cfbundleshortversionstring="$("$bin"/PlistBuddy -c "Print CFBundleShortVersionString" Info.plist | tr -d '"')"
+                fi
+                LC_ALL=C sed -i -e "s/$cfbundleshortversionstring/2022070700/g" Info.plist
+                if [ "$os" = "Darwin" ]; then
+                    plutil -convert binary1 Info.plist
+                else
+                    plistutil -i Info.plist -f bin -o Info.plist
+                fi
+                cd "$dir"/
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/Info.plist root@localhost:/mnt4/System/Library/Security/Certificates.bundle/Info.plist 2> /dev/null
+                if [[ "$version" == "11.3"* || "$version" == "11.4"* ]]; then
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
+                    "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -113
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
+                else
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
+                    "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -11
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
+                    #if [[ -e "$dir"/$deviceid/0.0/activation_records/activation_record.plist ]]; then
+                        # [*] Alert
+                        # [*] If you boot now, you will get stuck at the \"screen time\" step in Setup.app
+                        # [*] You must delete Setup.app if you want to be able to use iOS/iPadOS $1
+                        # [*] See https://files.catbox.moe/96vhbl.mov for a video demonstration of the issue
+                        # [*] You will only see this message if activation_records are present for your device
+                        # Would you like to delete Setup.app? [y/n]:
+                    #    "$bin"/setuphelper.sh $version
+                    #fi
+                fi
+            elif [[ "$version" == "12."* ]]; then
+                if [[ "$appleinternal" == 1 ]]; then
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/AppleInternal.tar root@localhost:/mnt4/
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/PrototypeTools.framework_ios12.tar root@localhost:/mnt4/
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/CoreServices/SystemVersion.plist "$dir"/$deviceid/$cpid/$version/SystemVersion.plist
+                    LC_ALL=C sed -i -e 's/<\/dict>/<key>ReleaseType<\/key><string>Internal<\/string><key>ProductType<\/key><string>Internal<\/string><\/dict>/g' "$dir"/$deviceid/$cpid/$version/SystemVersion.plist
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/SystemVersion.plist root@localhost:/mnt4/System/Library/CoreServices/SystemVersion.plist
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/SpringBoard-Internal.strings root@localhost:/mnt4/System/Library/CoreServices/SpringBoard.app/en.lproj/
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/SpringBoard-Internal.strings root@localhost:/mnt4/System/Library/CoreServices/SpringBoard.app/en_GB.lproj/
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.springboard_ios10.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.springboard.plist
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar -xvf /mnt4/PrototypeTools.framework_ios12.tar -C /mnt4/System/Library/PrivateFrameworks/'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt4/System/Library/PrivateFrameworks/PrototypeTools.framework'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt4/PrototypeTools.framework_ios12.tar'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar -xvf /mnt4/AppleInternal.tar -C /mnt4/'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt4/AppleInternal/'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt4/AppleInternal.tar'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt5/mobile/Library/Caches/com.apple.MobileGestalt.plist'
+                fi
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/Undecimus.app_disk0s1s1.tar.gz root@localhost:/mnt4/
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar -xzvf /mnt4/Undecimus.app_disk0s1s1.tar.gz -C /mnt4/Applications/"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/System/Library/DataClassMigrators/SystemAppMigrator.migrator/"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv -v /mnt5/staged_system_apps/* /mnt4/Applications"
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.Collection.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.Collection.plist
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.plist
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/Certificates.bundle.tar.gz root@localhost:/mnt4/
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'tar --preserve-permissions -xzvf /mnt4/Certificates.bundle.tar.gz -C /mnt4/' 2> /dev/null
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/Security/Certificates.bundle/Info.plist "$dir"/$deviceid/$cpid/$version/Info.plist 2> /dev/null
+                cd "$dir"/$deviceid/$cpid/$version/
+                if [ "$os" = "Darwin" ]; then
+                    plutil -convert xml1 Info.plist
+                    cfbundleshortversionstring="$(/usr/bin/plutil -extract "CFBundleShortVersionString" xml1 -o - Info.plist | grep '<string>' | cut -d\> -f2 |cut -d\< -f1 | head -1)"
+                else
+                    plistutil -i Info.plist -f xml -o Info.plist
+                    cfbundleshortversionstring="$("$bin"/PlistBuddy -c "Print CFBundleShortVersionString" Info.plist | tr -d '"')"
+                fi
+                LC_ALL=C sed -i -e "s/$cfbundleshortversionstring/2022070700/g" Info.plist
+                if [ "$os" = "Darwin" ]; then
+                    plutil -convert binary1 Info.plist
+                else
+                    plistutil -i Info.plist -f bin -o Info.plist
+                fi
+                cd "$dir"/
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
+                "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -12
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
+                #if [[ -e "$dir"/$deviceid/0.0/activation_records/activation_record.plist ]]; then
+                    # [*] Alert
+                    # [*] If you boot now, you will get stuck at the \"screen time\" step in Setup.app
+                    # [*] You must delete Setup.app if you want to be able to use iOS/iPadOS $1
+                    # [*] See https://files.catbox.moe/96vhbl.mov for a video demonstration of the issue
+                    # [*] You will only see this message if activation_records are present for your device
+                    # Would you like to delete Setup.app? [y/n]:
+                    #"$bin"/setuphelper.sh $version
+                #fi
+            elif [[ "$version" == "13."* ]]; then
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/System/Library/DataClassMigrators/SystemAppMigrator.migrator/"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv -v /mnt5/staged_system_apps/* /mnt4/Applications"
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.Collection.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.Collection.plist
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.plist
+                #"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
+                #if [[ "$version" == "13.0"* || "$version" == "13.1"* || "$version" == "13.2"* || "$version" == "13.3"* ]]; then
+                #    "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -13
+                #else
+                #    "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -134
+                #fi
+                #"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv /mnt4/sbin/fsck /mnt4/sbin/fsckBackup"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv /mnt4/System/Library/Filesystems/apfs.fs /mnt4/System/Library/Filesystems/apfs.fsBackup"
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/apfs.fs_ios14.tar.gz root@localhost:/mnt4/
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar -xzvf /mnt4/apfs.fs_ios14.tar.gz -C /mnt4"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/apfs.fs_ios14.tar.gz"
+            elif [[ "$version" == "14."* ]]; then
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt4/System/Library/DataClassMigrators/SystemAppMigrator.migrator/"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv -v /mnt5/staged_system_apps/* /mnt4/Applications"
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.Collection.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.Collection.plist
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.plist root@localhost:/mnt5/mobile/Library/Preferences/com.apple.Accessibility.plist
+                #"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
+                #"$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -14
+                #"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt4/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
+            fi
+            if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram auto-boot=false" 2> /dev/null
+                pongo=0
+            fi
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt3" 2> /dev/null
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt4" 2> /dev/null
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt5" 2> /dev/null
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "bash -c mount_filesystems" 2> /dev/null
+            #"$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram oblit-inprogress=5"
         fi
-        if [[ ! "$dualboot_hfs" == 1 ]]; then
-            $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-        fi
+        $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
         sleep 5
         if [[ ! -e "$dir"/$deviceid/0.0/activation_records/activation_record.plist || "$force_activation" == 1 ]]; then
             if [[ "$version" == "9.3"* || "$version" == "10."* || "$version" == "11."* || "$version" == "12."* ||  "$version" == "13."* || "$version" == "14."* ]]; then
                 if [ -e "$dir"/$deviceid/$cpid/$version/iBSS.img4 ]; then
+                    "$bin"/dfuhelper3.sh
                     if [ "$os" = "Darwin" ]; then
                         if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                            if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                                sleep 10
-                                if [ "$(get_device_mode)" = "recovery" ]; then
-                                    "$bin"/dfuhelper.sh
-                                else
-                                    "$bin"/dfuhelper4.sh
-                                    sleep 5
-                                    "$bin"/irecovery -c "setenv auto-boot false"
-                                    "$bin"/irecovery -c "saveenv"
-                                    "$bin"/dfuhelper.sh
-                                fi
-                            elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                                "$bin"/dfuhelper2.sh
-                            else
-                                "$bin"/dfuhelper3.sh
-                            fi
+                            "$bin"/dfuhelper3.sh
                         fi
                     else
                         if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                            if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                                sleep 10
-                                if [ "$(get_device_mode)" = "recovery" ]; then
-                                    "$bin"/dfuhelper.sh
-                                else
-                                    "$bin"/dfuhelper4.sh
-                                    sleep 5
-                                    "$bin"/irecovery -c "setenv auto-boot false"
-                                    "$bin"/irecovery -c "saveenv"
-                                    "$bin"/dfuhelper.sh
-                                fi
-                            elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                                "$bin"/dfuhelper2.sh
-                            else
-                                "$bin"/dfuhelper3.sh
-                            fi
+                            "$bin"/dfuhelper3.sh
                         fi
                     fi
                     _wait_for_dfu
@@ -4807,43 +3256,14 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 echo "[*] When your device gets to the setup screen, put the device back into dfu mode"
                 echo "[*] We will then activate your device to allow you to navigate to the home screen"
                 sleep 5
+                "$bin"/dfuhelper3.sh
                 if [ "$os" = "Darwin" ]; then
                     if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                        if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                            sleep 10
-                            if [ "$(get_device_mode)" = "recovery" ]; then
-                                "$bin"/dfuhelper.sh
-                            else
-                                "$bin"/dfuhelper4.sh
-                                sleep 5
-                                "$bin"/irecovery -c "setenv auto-boot false"
-                                "$bin"/irecovery -c "saveenv"
-                                "$bin"/dfuhelper.sh
-                            fi
-                        elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                            "$bin"/dfuhelper2.sh
-                        else
-                            "$bin"/dfuhelper3.sh
-                        fi
+                        "$bin"/dfuhelper3.sh
                     fi
                 else
                     if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                        if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                            sleep 10
-                            if [ "$(get_device_mode)" = "recovery" ]; then
-                                "$bin"/dfuhelper.sh
-                            else
-                                "$bin"/dfuhelper4.sh
-                                sleep 5
-                                "$bin"/irecovery -c "setenv auto-boot false"
-                                "$bin"/irecovery -c "saveenv"
-                                "$bin"/dfuhelper.sh
-                            fi
-                        elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                            "$bin"/dfuhelper2.sh
-                        else
-                            "$bin"/dfuhelper3.sh
-                        fi
+                        "$bin"/dfuhelper3.sh
                     fi
                 fi
                 _wait_for_dfu
@@ -4951,47 +3371,14 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         fi
         _kill_if_running iproxy
         if [ -e "$dir"/$deviceid/$cpid/$version/iBSS.img4 ]; then
+            "$bin"/dfuhelper3.sh
             if [ "$os" = "Darwin" ]; then
                 if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                    if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                        sleep 10
-                        if [ "$(get_device_mode)" = "recovery" ]; then
-                            "$bin"/irecovery -c "setenv auto-boot true"
-                            "$bin"/irecovery -c "saveenv"
-                            "$bin"/dfuhelper.sh
-                        else
-                            "$bin"/dfuhelper4.sh
-                            sleep 5
-                            "$bin"/irecovery -c "setenv auto-boot true"
-                            "$bin"/irecovery -c "saveenv"
-                            "$bin"/dfuhelper.sh
-                        fi
-                    elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                        "$bin"/dfuhelper2.sh
-                    else
-                        "$bin"/dfuhelper3.sh
-                    fi
+                    "$bin"/dfuhelper3.sh
                 fi
             else
                 if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                    if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                        sleep 10
-                        if [ "$(get_device_mode)" = "recovery" ]; then
-                            "$bin"/irecovery -c "setenv auto-boot true"
-                            "$bin"/irecovery -c "saveenv"
-                            "$bin"/dfuhelper.sh
-                        else
-                            "$bin"/dfuhelper4.sh
-                            sleep 5
-                            "$bin"/irecovery -c "setenv auto-boot true"
-                            "$bin"/irecovery -c "saveenv"
-                            "$bin"/dfuhelper.sh
-                        fi
-                    elif [[ "$cpid" = 0x801* && "$deviceid" != *"iPad"* ]]; then
-                        "$bin"/dfuhelper2.sh
-                    else
-                        "$bin"/dfuhelper3.sh
-                    fi
+                    "$bin"/dfuhelper3.sh
                 fi
             fi
             _wait_for_dfu
@@ -5019,6 +3406,59 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         echo "done"
         exit 0
     else
+        if [[ -e "$dir"/$deviceid/0.0/apticket.der && -e "$dir"/$deviceid/0.0/sep-firmware.img4 && -e "$dir"/$deviceid/0.0/keybags ]]; then
+            if [[ "$cpid" == "0x8000" || "$cpid" == "0x8001" || "$cpid" == "0x8003" ]]; then
+                if [[ "$pongo" == 1 ]]; then
+                    _download_ramdisk_boot_files $deviceid $replace 14.3
+                    pongo=0
+                    r="14.3"
+                    fuck=1
+                fi
+            fi
+        fi
+        cd "$wd"
+        if [[ "$ramdisk" == 1 || "$dump_blobs" == 1 || "$dump_nand" == 1 || "$restore_activation" == 1 || "$restore_nand" == 1 || "$restore_mnt1" == 1 || "$restore_mnt2" == 1 || "$disable_NoMoreSIGABRT" == 1 || "$NoMoreSIGABRT" == 1 ]]; then
+            if [[ "$version" == "16."* || "$version" == "17."* ]]; then
+                pongo=1
+            fi
+        fi
+        _boot_ramdisk $deviceid $replace $r
+        if [[ "$hit2" == 1 ]]; then
+            hit2=0
+            pongo=1
+        fi
+        if [[ -e "$dir"/$deviceid/0.0/apticket.der && -e "$dir"/$deviceid/0.0/sep-firmware.img4 && -e "$dir"/$deviceid/0.0/keybags ]]; then
+            if [[ "$cpid" == "0x8000" || "$cpid" == "0x8001" || "$cpid" == "0x8003" ]]; then
+                if [[ "$pongo" == 1 ]]; then
+                    _download_ramdisk_boot_files $deviceid $replace 14.3
+                    pongo=0
+                    r="14.3"
+                    fuck=1
+                fi
+            fi
+        fi
+        cd "$dir"/
+        read -p "[*] Press Enter once your device has fully booted into the SSH ramdisk " r1
+        echo "[*] Waiting 6 seconds before continuing.."
+        sleep 6
+        sudo killall -STOP -c usbd
+        if [[ ! "$no_prompt_replug" == 1 ]]; then
+            read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
+            if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
+                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                echo "[*] Waiting 10 seconds before continuing.."
+                sleep 10
+            elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
+                echo "[*] Ok no problem, continuing.."
+            else
+                echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
+                read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
+                echo "[*] Waiting 10 seconds before continuing.."
+                sleep 10
+            fi
+        fi
+        "$bin"/iproxy 2222 22 &
+        sleep 2
         if [[ "$ramdisk" == 1 || "$force_activation" == 1 || "$dump_blobs" == 1 ]]; then
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
