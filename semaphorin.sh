@@ -2,7 +2,6 @@
 mkdir -p logs
 #set -x
 verbose=1
-{
 echo "[*] Command ran:`if [ $EUID = 0 ]; then echo " sudo"; fi` ./semaphorin.sh $@"
 os=$(uname)
 maj_ver=$(echo "$os_ver" | awk -F. '{print $1}')
@@ -545,7 +544,11 @@ _download_ramdisk_boot_files() {
                     "$bin"/kairos "$dir"/$1/$cpid/ramdisk/$3/iBEC.dec "$dir"/$1/$cpid/ramdisk/$3/iBEC.patched -b "rd=md0 debug=0x2014e amfi=0xff cs_enforcement_disable=1 $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" -n
                 elif [[ "$3" == "9."* ]]; then
                     "$bin"/kairos "$dir"/$1/$cpid/ramdisk/$3/iBSS.dec "$dir"/$1/$cpid/ramdisk/$3/iBSS.patched
-                    "$bin"/kairos "$dir"/$1/$cpid/ramdisk/$3/iBEC.dec "$dir"/$1/$cpid/ramdisk/$3/iBEC.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress" -n
+                    "$bin"/kairos "$dir"/$1/$cpid/ramdisk/$3/iBEC.dec "$dir"/$1/$cpid/ramdisk/$3/iBEC2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
+                    if [[ ! "$?" == "0" ]]; then
+                        "$bin"/iBoot64Patcher "$dir"/$1/$cpid/ramdisk/$3/iBEC.dec "$dir"/$1/$cpid/ramdisk/$3/iBEC2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
+                    fi
+                    "$bin"/iBoot64Patcher2 "$dir"/$1/$cpid/ramdisk/$3/iBEC2.dec "$dir"/$1/$cpid/ramdisk/$3/iBEC.patched -n
                 else
                     "$bin"/ipatcher "$dir"/$1/$cpid/ramdisk/$3/iBSS.dec "$dir"/$1/$cpid/ramdisk/$3/iBSS.patched
                     "$bin"/ipatcher "$dir"/$1/$cpid/ramdisk/$3/iBEC.dec "$dir"/$1/$cpid/ramdisk/$3/iBEC.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress" -n
@@ -1632,20 +1635,68 @@ _download_root_fs() {
         cp $(find . -name '*.ipsw*') "$dir"/$1/$cpid/$3/ipswcfw
         cd "$dir"/$1/$cpid/$3/ipswcfw
         "$bin"/7z x $(find . -name '*.ipsw*')
-        if [[ "$3" == "10.3"* || "$3" == "11."* || "$3" == "12."* || "$3" == "13."* || "$3" == "14."* ]]; then
-            if [ ! -e "$dir"/$1/$cpid/$3/OS.dmg ]; then
-                if [ "$os" = "Darwin" ]; then
-                    asr -source $fn -target "$dir"/$1/$cpid/$3/OS.dmg --embed -erase -noprompt --chunkchecksum --puppetstrings
-                else
-                    cp $fn "$dir"/$1/$cpid/$3/OS.dmg
-                fi
-                if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
-                "$bin"/irecovery -f /dev/null
-                fi
-            fi
-        fi
         mkdir work
         "$bin"/img4tool -e -s "$dir"/$1/0.0/shsh.shsh2 -m IM4M
+        if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* ]]; then
+            if [ ! -e "$dir"/$1/$cpid/$3/OS.dmg ]; then
+                cd "$dir"/work
+                if [[ "$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e $3 $1)" == "true" ]]; then
+                    cd "$dir"/$1/$cpid/$3/ipswcfw
+                    local fn
+                    "$bin"/pzb -g BuildManifest.plist "$ipswurl"
+                    if [ "$os" = "Darwin" ]; then
+                        fn="$(/usr/bin/plutil -extract "BuildIdentities".0."Manifest"."OS"."Info"."Path" xml1 -o - BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)"
+                    else
+                        fn="$("$bin"/PlistBuddy -c "Print BuildIdentities:0:Manifest:OS:Info:Path" BuildManifest.plist | tr -d '"')"
+                    fi
+                    cd "$dir"/work
+                    ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn $3 $1)"
+                    cd "$dir"/$1/$cpid/$3/ipswcfw
+                    "$bin"/dmg extract $fn "$dir"/$1/$cpid/$3/OS.dmg -k $ivkey
+                else
+                    cd "$dir"/$1/$cpid/$3/ipswcfw
+                    local fno
+                    local fnr
+                    "$bin"/pzb -g BuildManifest.plist "$ipswurl"
+                    if [ "$os" = "Darwin" ]; then
+                        fno="$(/usr/bin/plutil -extract "BuildIdentities".0."Manifest"."OS"."Info"."Path" xml1 -o - BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)"
+                        fnr="$(/usr/bin/plutil -extract "BuildIdentities".0."Manifest"."RestoreRamDisk"."Info"."Path" xml1 -o - BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)"
+                    else
+                        fno="$("$bin"/PlistBuddy -c "Print BuildIdentities:0:Manifest:OS:Info:Path" BuildManifest.plist | tr -d '"')"
+                        fnr="$("$bin"/PlistBuddy -c "Print BuildIdentities:0:Manifest:RestoreRamDisk:Info:Path" BuildManifest.plist | tr -d '"')"
+                    fi
+                    if [ ! -e "$dir"/$1/$cpid/$3/RestoreRamDisk.dmg ]; then
+                        "$bin"/pzb -g "$fnr" "$ipswurl"
+                        if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* ]]; then
+                            fn="$fnr"
+                            cd "$dir"/work
+                            if [[ "$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e $3 $1)" == "true" ]]; then
+                                ivkey="$(../java/bin/java -jar ../Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -ivkey $fn $3 $1)"
+                                cd "$dir"/$1/$cpid/$3/ipswcfw
+                                "$bin"/img4 -i $fn -o "$dir"/$1/$cpid/$3/RestoreRamDisk.dmg -k $ivkey
+                            else
+                                cd "$dir"/$1/$cpid/$3/ipswcfw
+                                kbag=$("$bin"/img4 -i $fn -b | head -n 1)
+                                iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
+                                key=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ' ' -f 4)
+                                ivkey="$iv$key"
+                                "$bin"/img4 -i $fn -o "$dir"/$1/$cpid/$3/RestoreRamDisk.dmg -k $ivkey
+                            fi
+                        else
+                            "$bin"/img4 -i "$fnr" -o "$dir"/$1/$cpid/$3/RestoreRamDisk.dmg
+                        fi
+                    fi
+                    fn="$fno"
+                    ivkey=$("$bin"/pass2key $scid "$dir"/$1/$cpid/$3/RestoreRamDisk.dmg $fn | tail -n 1 | cut -d ' ' -f 3)
+                    "$bin"/dmg extract $fn "$dir"/$1/$cpid/$3/OS.dmg -k $ivkey
+                fi
+            fi
+            if [ ! -e "$dir"/$1/$cpid/$3/rw.dmg ]; then
+                "$bin"/dmg build "$dir"/$1/$cpid/$3/OS.dmg "$dir"/$1/$cpid/$3/rw.dmg
+            fi
+            rm -rf $fn
+            cp "$dir"/$1/$cpid/$3/rw.dmg $fn
+        fi
         # rdsk
         rdskpath=$(plutil -extract "BuildIdentities".0."Manifest"."RestoreRamDisk"."Info"."Path" xml1 -o - BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)
         cp "$dir"/$1/$cpid/$3/RestoreRamDisk.dmg rdsk.dmg
@@ -1653,7 +1704,8 @@ _download_root_fs() {
         current_size=$(stat -f %z rdsk.dmg)
         hdiutil resize -size "$((current_size + 10000000))" rdsk.dmg # 10MB more
         hdiutil attach -mountpoint rdmount rdsk.dmg
-        "$bin"/restored_external64patcher ./rdmount/usr/local/bin/restored_external ./work/restored_external.patched
+        "$bin"/restored_external64patcher ./rdmount/usr/local/bin/restored_external ./work/restored_external2.patched -s -b
+        "$bin"/Kernel64Patcher ./work/restored_external2.patched ./work/restored_external.patched -i
         "$bin"/ldid -e ./rdmount/usr/local/bin/restored_external > ./work/restored_external.xml
         "$bin"/ldid -S./work/restored_external.xml ./work/restored_external.patched
         cp -av ./work/restored_external.patched ./rdmount/usr/local/bin/restored_external
@@ -1743,11 +1795,11 @@ _download_root_fs() {
         cp "$dir"/$1/$cpid/$3/kcache.raw work/kcache.raw
         "$bin"/KPlooshFinder work/kcache.raw work/kcache1.raw
         if [[ "$3" == "7."* ]]; then
-            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 7 -f 7 -a
+            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 7 -m 7 -e 7 -f 7 -k
         elif [[ "$3" == "8"* ]]; then
-            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 8 -f 8
+            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 8 -t -p -e 8 -f 8 -a -m 8 -g -s -d
         elif [[ "$3" == "9"* ]]; then
-            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 9 -f 9
+            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 9 -f 9 -k
         elif [[ "$3" == "10."* ]]; then
             "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 10 -f 10 -q -a
         elif [[ "$3" == "11"* ]]; then
@@ -1777,9 +1829,11 @@ _download_root_fs() {
         rm -vf "$illbpath"
         rm -vf "$ibotpath"
         rm -vf "$dtrepath"
+        rm -vf "$krnlpath"
         cp -av illb.im4p "$illbpath"
         cp -av ibot.im4p "$ibotpath"
         cp -av dtre.im4p "$dtrepath"
+        cp -av krnl.im4p "$krnlpath"
         rm -rf "$dir"/$1/$cpid/$3/rdsk.im4p
         rm -rf "$dir"/$1/$cpid/$3/dtre.im4p
         rm -rf "$dir"/$1/$cpid/$3/rkrn.im4p
@@ -3530,4 +3584,3 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         _kill_if_running iproxy
     fi
 fi
-} | tee logs/"$(date +%T)"-"$(date +%F)"-"$(uname)"-"$(uname -r)".log
