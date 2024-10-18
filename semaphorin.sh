@@ -104,10 +104,10 @@ fi
 print_help() {
     cat << EOF
 Usage: $0 [VERSION...] [OPTION...]
-iOS/iPadOS 7.1.2-12.1 Downgrade & Jailbreak tool for older checkm8 devices using seprmvr64
+iOS/iPadOS 7.0.6-9.3 Downgrade & Jailbreak tool for older checkm8 devices using seprmvr64
 Examples:
-    $0 7.1.2 --restore
-    $0 7.1.2 --boot
+    $0 7.0.6 --restore
+    $0 7.0.6 --boot
 
 Main operation mode:
     --help                     Print this help
@@ -116,16 +116,14 @@ Main operation mode:
     --serial                   Enable serial debugging
     --ssh                      Tries to connect to ssh over usb interface to the connected device
     --restore                  Wipe device and downgrade ios
+    --backup-activation        Backs up your activation records and other important files from your iOS/iPadOS device
     --restore-activation       Copies the backed up activation records to /dev/disk0s1s2 on the iOS/iPadOS device
     --dump-nand                Backs up the entire contents of your iOS/iPadOS device to disk0.gz
-    --dualboot-hfs             This is an experimental dualboot feature for iOS/iPadOS 10.3.3 devices only
     --appleinternal            Enables internalization during restore
     --NoMoreSIGABRT            Adds the "protect" flag to /dev/disk0s1s2
     --disable-NoMoreSIGABRT    Removes the "protect" flag from /dev/disk0s1s2
     --restore-factorydata      Copies the factory data from your backed up records folder to your iOS/iPadOS device
     --restore-nand             Copies the contents of disk0.gz to /dev/disk0 of the iOS/iPadOS device
-    --restore-mnt1             Copies the contents of disk0s1s1.gz to /dev/disk0s1s1 of the iOS/iPadOS device
-    --restore-mnt2             Copies the contents of disk0s1s2.gz to /dev/disk0s1s2 of the iOS/iPadOS device
     --boot                     Don't enter ramdisk or wipe device, just boot
     --boot-clean               Don't enter ramdisk or wipe device, just boot without seprmvr64
     --clean                    Delete all the created boot files for your device
@@ -161,6 +159,9 @@ parse_opt() {
         --disable-NoMoreSIGABRT)
             disable_NoMoreSIGABRT=1
             ;;
+        --backup-activation)
+            backup_activation=1
+            ;;
         --restore-activation)
             restore_activation=1
             ;;
@@ -169,12 +170,6 @@ parse_opt() {
             ;;
         --restore-nand)
             restore_nand=1
-            ;;
-        --restore-mnt1)
-            restore_mnt1=1
-            ;;
-        --restore-mnt2)
-            restore_mnt2=1
             ;;
         --force-activation)
             force_activation=1
@@ -532,7 +527,6 @@ _download_ramdisk_boot_files() {
                     sudo "$bin"/gnutar -xvf "$bin"/libresolv.9.dylib.tar -C /tmp/ramdisk/usr/lib
                 fi
                 # gptfdisk automation shenanigans
-                sudo "$bin"/gnutar -xvf "$dir"/jb/gpt.txt_hfs_dualboot.tar -C /tmp/ramdisk
                 sudo "$bin"/gnutar -xvf "$dir"/jb/gpt.txt.tar -C /tmp/ramdisk
                 # fixup update partition script, i.e. changes all Update partitions to UpdateX partitions
                 sudo "$bin"/gnutar -xvf "$dir"/jb/fixup_update_partition.tar -C /tmp/ramdisk
@@ -579,7 +573,6 @@ _download_ramdisk_boot_files() {
                     sudo "$bin"/gnutar -xvf "$bin"/libresolv.9.dylib.tar -C /tmp/ramdisk/usr/lib
                 fi
                 # gptfdisk automation shenanigans
-                sudo "$bin"/gnutar -xvf "$dir"/jb/gpt.txt_hfs_dualboot.tar -C /tmp/ramdisk
                 sudo "$bin"/gnutar -xvf "$dir"/jb/gpt.txt.tar -C /tmp/ramdisk
                 # fixup update partition script, i.e. changes all Update partitions to UpdateX partitions
                 sudo "$bin"/gnutar -xvf "$dir"/jb/fixup_update_partition.tar -C /tmp/ramdisk
@@ -642,7 +635,6 @@ _download_ramdisk_boot_files() {
                     "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$bin"/libresolv.9.dylib.tar
                 fi
                 # gptfdisk automation shenanigans
-                "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$dir"/jb/gpt.txt_hfs_dualboot.tar
                 "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$dir"/jb/gpt.txt.tar
                 # fixup update partition script, i.e. changes all Update partitions to UpdateX partitions
                 "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$dir"/jb/fixup_update_partition.tar
@@ -679,7 +671,6 @@ _download_ramdisk_boot_files() {
                     "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$bin"/libresolv.9.dylib.tar
                 fi
                 # gptfdisk automation shenanigans
-                "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$dir"/jb/gpt.txt_hfs_dualboot.tar
                 "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$dir"/jb/gpt.txt.tar
                 # fixup update partition script, i.e. changes all Update partitions to UpdateX partitions
                 "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$dir"/jb/fixup_update_partition.tar
@@ -2027,9 +2018,18 @@ if [[ "$*" == *"--fix-auto-boot"* ]]; then
     "$bin"/irecovery -c "reset"
     exit 0
 fi 
-if [[ "$(get_device_mode)" == "dfu" ]]; then
-    "$bin"/dfuhelper3.sh
-fi 
+#if [[ "$(get_device_mode)" == "dfu" ]]; then
+#    "$bin"/dfuhelper3.sh
+#fi
+if [ "$os" = "Darwin" ]; then
+    if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
+        "$bin"/dfuhelper.sh
+    fi
+else
+    if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
+        "$bin"/dfuhelper.sh
+    fi
+fi
 _wait_for_dfu
 sudo killall -STOP -c usbd
 rm -rf work
@@ -2071,17 +2071,28 @@ if [ "$serial" = "1" ]; then
 else
     boot_args="-v"
 fi
+if [[ ! -e "$dir"/$deviceid/0.0/shsh.shsh2 && ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 && ! -e "$dir"/$deviceid/0.0/disk0.gz ]]; then
+    if [[ "$restore" == 1 || "$force_activation" == 1 || "$boot" == 1 || "$boot_clean" == 1 ]]; then
+        echo "[*] You need to backup your shit first, please run $0 $version --dump-blobs --backup-activation --dump-nand"
+        exit 0
+    fi
+fi
 if [[ ! -e "$dir"/$deviceid/0.0/shsh.shsh2 ]]; then
     if [[ "$restore" == 1 || "$force_activation" == 1 || "$boot" == 1 || "$boot_clean" == 1 ]]; then
         echo "[*] You need to dump your blobs first, please run $0 $version --dump-blobs"
         exit 0
     fi
 fi
-if [[ "$version" == "9.3"* || "$version" == "10."* ]]; then
-    if [[ ! "$ramdisk" == 1 ]]; then
-        if [[ ! "$dump_blobs" == 1 ]]; then
-            force_activation=1
-        fi
+if [[ ! -e "$dir"/$deviceid/0.0/apticket.der || ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 || ! -e "$dir"/$deviceid/0.0/keybags ]]; then
+    if [[ "$restore" == 1 || "$force_activation" == 1 || "$boot" == 1 || "$boot_clean" == 1 ]]; then
+        echo "[*] You need to dump your activation records first, please run $0 $version --backup-activation"
+        exit 0
+    fi
+fi
+if [[ ! -e "$dir"/$deviceid/0.0/disk0.gz ]]; then
+    if [[ "$restore" == 1 || "$force_activation" == 1 || "$boot" == 1 || "$boot_clean" == 1 ]]; then
+        echo "[*] You need to dump your nand first, please run $0 $version --dump-nand"
+        exit 0
     fi
 fi
 _wait_for_dfu
@@ -2110,8 +2121,15 @@ if [[ "$clean" == 1 ]]; then
 fi
 if [ -z "$r" ]; then
     read -p "[*] What iOS/iPadOS version is or what installed on this device prior to downgrade? " r
-    if [[ "$dump_blobs" == 1 ]]; then
+    if [[ ! -e "$dir"/$deviceid/0.0/apticket.der || ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 || ! -e "$dir"/$deviceid/0.0/keybags || ! -e "$dir"/$deviceid/0.0/shsh.shsh2 || ! -e "$dir"/$deviceid/0.0/disk0.gz ]]; then
         version="$r"
+    fi
+fi
+if [[ "$version" == "9.3"* || "$version" == "10."* ]]; then
+    if [[ ! "$ramdisk" == 1 ]]; then
+        if [[ ! "$dump_blobs" == 1 ]]; then
+            force_activation=1
+        fi
     fi
 fi
 if [[ "$boot_clean" == 1 ]]; then
@@ -2138,9 +2156,9 @@ if [[ "$boot" == 1 ]]; then
     fi
     exit 0
 fi
-if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activation" == 1 || "$restore_activation" == 1 || "$dump_nand" == 1 || "$restore_nand" == 1 || "$restore_mnt1" == 1 || "$restore_mnt2" == 1 || "$disable_NoMoreSIGABRT" == 1 || "$NoMoreSIGABRT" == 1 ]]; then
+if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activation" == 1 || "$backup_activation" == 1 || "$restore_activation" == 1 || "$dump_nand" == 1 || "$restore_nand" == 1 || "$disable_NoMoreSIGABRT" == 1 || "$NoMoreSIGABRT" == 1 ]]; then
     _kill_if_running iproxy
-    if [[ "$ramdisk" == 1 || "$dump_blobs" == 1 || "$dump_nand" == 1 || "$restore_activation" == 1 || "$restore_nand" == 1 || "$restore_mnt1" == 1 || "$restore_mnt2" == 1 || "$disable_NoMoreSIGABRT" == 1 || "$NoMoreSIGABRT" == 1 ]]; then
+    if [[ "$ramdisk" == 1 || "$dump_blobs" == 1 || "$dump_nand" == 1 || "$backup_activation" == 1 || "$restore_activation" == 1 || "$restore_nand" == 1 || "$disable_NoMoreSIGABRT" == 1 || "$NoMoreSIGABRT" == 1 ]]; then
         rdversion="$version"
         if [[ "$version" == "10."* || "$version" == "11.0" ]]; then
             rdversion="10.3.3"
@@ -3137,7 +3155,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             fi
         fi
         cd "$wd"
-        if [[ "$ramdisk" == 1 || "$dump_blobs" == 1 || "$dump_nand" == 1 || "$restore_activation" == 1 || "$restore_nand" == 1 || "$restore_mnt1" == 1 || "$restore_mnt2" == 1 || "$disable_NoMoreSIGABRT" == 1 || "$NoMoreSIGABRT" == 1 ]]; then
+        if [[ "$ramdisk" == 1 || "$dump_blobs" == 1 || "$dump_nand" == 1 || "$backup_activation" == 1 || "$restore_activation" == 1 || "$restore_nand" == 1 || "$disable_NoMoreSIGABRT" == 1 || "$NoMoreSIGABRT" == 1 ]]; then
             if [[ "$version" == "16."* || "$version" == "17."* ]]; then
                 pongo=1
             fi
@@ -3164,21 +3182,6 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         sudo killall -STOP -c usbd
         "$bin"/iproxy 2222 22 &
         sleep 2
-        if [[ "$ramdisk" == 1 || "$force_activation" == 1 || "$dump_blobs" == 1 ]]; then
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
-            if [[ "$version" == "7."* || "$version" == "8."* || "$version" == "9."* || "$version" == "10.0"* || "$version" == "10.1"* || "$version" == "10.2"* ]]; then
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s1 /mnt1" 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s2 /mnt2" 2> /dev/null
-            else
-                systemdisk=1
-                datadisk=2
-                systemfs=disk0s1s$systemdisk
-                datafs=disk0s1s$datadisk
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/$systemfs /mnt1"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/$datafs /mnt2"
-            fi
-        fi
         if [[ "$restore_activation" == 1 ]]; then
             if [[ "$r" == "7."* || "$r" == "8."* || "$r" == "9."* || "$r" == "10.0"* || "$r" == "10.1"* || "$r" == "10.2"* ]]; then
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
@@ -3338,12 +3341,9 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
                 echo "[*] Restored the activation records on your device"
-                $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-                _kill_if_running iproxy
-                exit 0
             fi
         fi
-        if [[ "$dump_blobs" == 1 ]]; then
+        if [[ "$backup_activation" == 1 ]]; then
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
             if [[ "$r" == "7."* || "$r" == "8."* || "$r" == "9."* || "$r" == "10.0"* || "$r" == "10.1"* || "$r" == "10.2"* ]]; then
@@ -3353,6 +3353,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             else
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "bash -c mount_filesystems" 2> /dev/null
             fi
+            mkdir -p "$dir"/$deviceid/0.0/
 			if [ ! -e "$dir"/$deviceid/0.0/apticket.der ]; then
 				"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/System/Library/Caches/apticket.der "$dir"/$deviceid/0.0/apticket.der 2> /dev/null
 			fi
@@ -3389,6 +3390,9 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             if [ ! -e "$dir"/$deviceid/0.0/data_ark.plist ]; then
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt2/root/Library/Lockdown/data_ark.plist "$dir"/$deviceid/0.0/data_ark.plist 2> /dev/null
             fi
+            if [ ! -e "$dir"/$deviceid/0.0/SystemVersion.plist ]; then
+                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/System/Library/CoreServices/SystemVersion.plist "$dir"/$deviceid/0.0/SystemVersion.plist 2> /dev/null
+            fi
             #if [ ! -e "$dir"/$deviceid/0.0/Carrier_Bundles.tar ]; then
             #    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "tar -cvf /mnt1/Carrier_Bundles.tar /mnt1/System/Library/Carrier\ Bundles/iPhone/" 2> /dev/null
             #    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/Carrier_Bundles.tar "$dir"/$deviceid/0.0/Carrier_Bundles.tar 2> /dev/null
@@ -3411,27 +3415,40 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
 			if [[ ! -e "$dir"/$deviceid/0.0/apticket.der ]]; then
 				has_active=$(remote_cmd "ls /mnt6/active" 2> /dev/null)
 				if [ ! "$has_active" = "/mnt6/active" ]; then
-					echo "[*] An error occured while trying to back up the required files required to downgrade"
-					$("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-                    _kill_if_running iproxy
-					exit 0
+                    echo "[!] Active file does not exist! Please use SSH to create it"
+                    echo "    /mnt6/active should contain the name of the UUID in /mnt6"
+                    echo "    When done, type reboot in the SSH session, then rerun the script"
+                    echo "    ssh root@localhost -p 2222"
+                    ramdisk=1
+                else
+                    active=$(remote_cmd "cat /mnt6/active" 2> /dev/null)
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt6/$active/System/Library/Caches/apticket.der "$dir"/$deviceid/0.0/apticket.der 2> /dev/null
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt6/$active/usr/standalone/firmware/sep-firmware.img4 "$dir"/$deviceid/0.0/sep-firmware.img4 2> /dev/null
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 root@localhost:/mnt6/$active/usr/standalone/firmware/FUD "$dir"/$deviceid/0.0/FUD 2> /dev/null
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 root@localhost:/mnt6/$active/usr/local/standalone/firmware/Baseband "$dir"/$deviceid/0.0/Baseband 2> /dev/null
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 root@localhost:/mnt6/$active/usr/standalone/firmware "$dir"/$deviceid/0.0/firmware 2> /dev/null
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 root@localhost:/mnt6/$active/usr/local "$dir"/$deviceid/0.0/local 2> /dev/null
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags -R schg /mnt6/$active/"
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt6/active"
 				fi
-				active=$(remote_cmd "cat /mnt6/active" 2> /dev/null)
-				"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt6/$active/System/Library/Caches/apticket.der "$dir"/$deviceid/0.0/apticket.der 2> /dev/null
-				"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt6/$active/usr/standalone/firmware/sep-firmware.img4 "$dir"/$deviceid/0.0/sep-firmware.img4 2> /dev/null
-				"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 root@localhost:/mnt6/$active/usr/standalone/firmware/FUD "$dir"/$deviceid/0.0/FUD 2> /dev/null
-				"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 root@localhost:/mnt6/$active/usr/local/standalone/firmware/Baseband "$dir"/$deviceid/0.0/Baseband 2> /dev/null
-				"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 root@localhost:/mnt6/$active/usr/standalone/firmware "$dir"/$deviceid/0.0/firmware 2> /dev/null
-				"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 root@localhost:/mnt6/$active/usr/local "$dir"/$deviceid/0.0/local 2> /dev/null
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags -R schg /mnt6/$active/"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt6/active"
 			fi
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
-            if [[ ! -e "$dir"/$deviceid/0.0/apticket.der || ! -e "$dir"/$deviceid/0.0/shsh.shsh2 || ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 || ! -e "$dir"/$deviceid/0.0/keybags ]]; then
+            if [[ ! -e "$dir"/$deviceid/0.0/apticket.der || ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 || ! -e "$dir"/$deviceid/0.0/keybags ]]; then
                 echo "[*] An error occured while trying to back up the required files required to downgrade"
             else
                 echo "[*] Backed up the required files required to downgrade"
+            fi
+        fi
+        if [[ "$dump_blobs" == 1 ]]; then
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
+            if [[ "$r" == "7."* || "$r" == "8."* || "$r" == "9."* || "$r" == "10.0"* || "$r" == "10.1"* || "$r" == "10.2"* ]]; then
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s1 /mnt1" 2> /dev/null
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "bash -c mount_filesystems" 2> /dev/null
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s2 /mnt2" 2> /dev/null
+            else
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "bash -c mount_filesystems" 2> /dev/null
             fi
             mkdir -p "$dir"/$deviceid/0.0/
             if [[ ! -e "$dir"/$deviceid/0.0/apticket.der ]]; then
@@ -3440,6 +3457,8 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             if [[ -e "$dir"/$deviceid/0.0/apticket.der ]]; then
                 echo "$dir"/$deviceid/0.0/apticket.der
             fi
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
             pwd
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cat /dev/rdisk1" | dd of=dump.raw bs=256 count=$((0x4000))
             stat dump.raw
@@ -3447,40 +3466,26 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             stat dumped.shsh
             mv dumped.shsh "$dir"/$deviceid/0.0/shsh.shsh2
             rm -rf dump.raw
-            $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-            _kill_if_running iproxy
-            exit 0
-        elif [[ "$dump_nand" == 1 ]]; then
+        fi
+        if [[ "$dump_nand" == 1 ]]; then
+            cd "$dir"/$deviceid/0.0/
             # dd if=/dev/sda bs=5M conv=fsync status=progress | gzip -c -9 | ssh user@DestinationIP 'gzip -d | dd of=/dev/sda bs=5M'
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
-            read -p "would you like to also back up /dev/disk0 to $dir/$deviceid/disk0.gz? " r
-            if [[ ! "$r" == "no" && ! "$r" == "n" ]]; then
-                echo "[*] Backing up /dev/disk0 to $dir/$deviceid/disk0.gz, this may take up to 15 minutes.."
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "dd if=/dev/disk0 bs=64k | gzip -1 -" | dd of=disk0.gz bs=64k
-            fi
-            read -p "would you like to also back up /dev/disk0s1s1 to $dir/$deviceid/disk0s1s1.gz? " r
-            if [[ ! "$r" == "no" && ! "$r" == "n" ]]; then
-                echo "[*] Backing up /dev/disk0s1s1 to $dir/$deviceid/disk0s1s1.gz, this may take up to 15 minutes.."
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "dd if=/dev/disk0s1s1 bs=64k | gzip -1 -" | dd of=disk0s1s1.gz bs=64k
-            fi
-            read -p "would you like to also back up /dev/disk0s1s2 to $dir/$deviceid/disk0s1s2.gz? " r
-            if [[ ! "$r" == "no" && ! "$r" == "n" ]]; then
-                 echo "[*] Backing up /dev/disk0s1s2 to $dir/$deviceid/disk0s1s2.gz, this may take up to 15 minutes.."
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "dd if=/dev/disk0s1s2 bs=64k | gzip -1 -" | dd of=disk0s1s2.gz bs=64k
-            fi
+            echo "[*] Backing up /dev/disk0 to $dir/$deviceid/0.0/disk0.gz, this may take up to 15 minutes.."
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "dd if=/dev/disk0 bs=64k | gzip -1 -" | dd of=disk0.gz bs=64k
             echo "[*] Disabling auto-boot in nvram to prevent effaceable storage issues.."
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram auto-boot=false" 2> /dev/null
             echo "[*] You can enable auto-boot again at any time by running $0 $version --fix-auto-boot"
             echo "[*] Done"
-            $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-            _kill_if_running iproxy
-            exit 0
-        elif [[ "$restore_nand" == 1 ]]; then
+            cd "$dir"/
+        fi
+        if [[ "$restore_nand" == 1 ]]; then
+            cd "$dir"/$deviceid/0.0/
             # dd if=/dev/sda bs=5M conv=fsync status=progress | gzip -c -9 | ssh user@DestinationIP 'gzip -d | dd of=/dev/sda bs=5M'
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
-            echo "[*] Restoring /dev/disk0 from $dir/disk0.gz, this may take up to 15 minutes.."
+            echo "[*] Restoring /dev/disk0 from $dir/$deviceid/0.0/disk0.gz, this may take up to 15 minutes.."
             dd if=disk0.gz bs=64k | "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "gzip -d | dd of=/dev/disk0 bs=64k"
             echo "[*] Enabling auto-boot in nvram to allow booting the restored nand after a reboot.."
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram auto-boot=true" 2> /dev/null
@@ -3489,35 +3494,12 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram oblit-inprogress=5" 2> /dev/null
             fi
             echo "[*] Done"
-            $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-            _kill_if_running iproxy
-            exit 0
-        elif [[ "$restore_mnt1" == 1 ]]; then
+            cd "$dir"/
+        fi
+        if [[ "$disable_NoMoreSIGABRT" == 1 ]]; then
             # dd if=/dev/sda bs=5M conv=fsync status=progress | gzip -c -9 | ssh user@DestinationIP 'gzip -d | dd of=/dev/sda bs=5M'
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
-            echo "[*] Restoring /dev/disk0s1s1 from $dir/disk0s1s1.gz, this may take up to 15 minutes.."
-            dd if=disk0s1s1.gz bs=64k | "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "gzip -d | dd of=/dev/disk0s1s1 bs=64k"
-            echo "[*] Enabling auto-boot in nvram to allow booting the restored nand after a reboot.."
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram auto-boot=true" 2> /dev/null
-            echo "[*] Done"
-            $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-            _kill_if_running iproxy
-            exit 0
-        elif [[ "$restore_mnt2" == 1 ]]; then
-            # dd if=/dev/sda bs=5M conv=fsync status=progress | gzip -c -9 | ssh user@DestinationIP 'gzip -d | dd of=/dev/sda bs=5M'
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
-            echo "[*] Restoring /dev/disk0s1s2 from $dir/disk0s1s2.gz, this may take up to 15 minutes.."
-            dd if=disk0s1s2.gz bs=64k | "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "gzip -d | dd of=/dev/disk0s1s2 bs=64k"
-            echo "[*] Enabling auto-boot in nvram to allow booting the restored nand after a reboot.."
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram auto-boot=true" 2> /dev/null
-            echo "[*] Done"
-            $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-            _kill_if_running iproxy
-            exit 0
-        elif [[ "$disable_NoMoreSIGABRT" == 1 ]]; then
-            # dd if=/dev/sda bs=5M conv=fsync status=progress | gzip -c -9 | ssh user@DestinationIP 'gzip -d | dd of=/dev/sda bs=5M'
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s1 /mnt1" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
             echo "[*] Disabling NoMoreSIGABRT on /dev/disk0s1s2.."
@@ -3527,11 +3509,11 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.patched root@localhost:/mnt1/out.img
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/bin/dd if=/mnt1/out.img of=/dev/disk0s1s2 bs=512 count=8192'
             echo "[*] Done"
-            $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-            _kill_if_running iproxy
-            exit 0
-        elif [[ "$NoMoreSIGABRT" == 1 ]]; then
+        fi
+        if [[ "$NoMoreSIGABRT" == 1 ]]; then
             # dd if=/dev/sda bs=5M conv=fsync status=progress | gzip -c -9 | ssh user@DestinationIP 'gzip -d | dd of=/dev/sda bs=5M'
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s1 /mnt1" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
             echo "[*] Enabling NoMoreSIGABRT on /dev/disk0s1s2.."
@@ -3541,10 +3523,17 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.patched root@localhost:/mnt1/out.img
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/bin/dd if=/mnt1/out.img of=/dev/disk0s1s2 bs=512 count=8192'
             echo "[*] Done"
-            $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-            _kill_if_running iproxy
-            exit 0
-        elif [[ "$force_activation" == 1 ]]; then
+        fi
+        if [[ "$force_activation" == 1 ]]; then
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
+            if [[ "$version" == "7."* || "$version" == "8."* || "$version" == "9."* || "$version" == "10.0"* || "$version" == "10.1"* || "$version" == "10.2"* ]]; then
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s1 /mnt1" 2> /dev/null
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s2 /mnt2" 2> /dev/null
+            else
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/disk0s1s1 /mnt1"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/disk0s1s2 /mnt2"
+            fi
             if [[ "$version" == "9.3"* || "$version" == "10.0"* || "$version" == "10.1"* || "$version" == "10.2"* ]]; then
                 # /mnt2/containers/Data/System/58954F59-3AA2-4005-9C5B-172BE4ADEC98/Library/internal/data_ark.plist
                 dataarkplist=$(remote_cmd "/usr/bin/find /mnt2/containers/Data/System -name 'internal'" 2> /dev/null)
@@ -3582,12 +3571,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt1/Applications/UnlimFileManager.app'
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/UnlimFileManager.app.tar.gz' 2> /dev/null
             fi
-            $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-            _kill_if_running iproxy
-            echo "done"
-            exit 0
+            echo "[*] Done"
         fi
-        ssh -o StrictHostKeyChecking=no -p2222 root@localhost
+        if [[ "$ramdisk" == 1 ]]; then
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
+            if [[ "$version" == "7."* || "$version" == "8."* || "$version" == "9."* || "$version" == "10.0"* || "$version" == "10.1"* || "$version" == "10.2"* ]]; then
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s1 /mnt1" 2> /dev/null
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s2 /mnt2" 2> /dev/null
+            else
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/disk0s1s1 /mnt1"
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/disk0s1s2 /mnt2"
+            fi
+            ssh -o StrictHostKeyChecking=no -p2222 root@localhost
+        fi
         $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
         _kill_if_running iproxy
     fi
