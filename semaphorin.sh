@@ -116,7 +116,7 @@ Main operation mode:
     --serial                   Enable serial debugging
     --ssh                      Tries to connect to ssh over usb interface to the connected device
     --restore                  Wipe device and downgrade ios
-    --backup-activation        Backs up your activation records and other important files from your iOS/iPadOS device
+    --dump-activation          Backs up your activation records and other important files from your iOS/iPadOS device
     --restore-activation       Copies the backed up activation records to /dev/disk0s1s2 on the iOS/iPadOS device
     --dump-nand                Backs up the entire contents of your iOS/iPadOS device to disk0.gz
     --appleinternal            Enables internalization during restore
@@ -159,8 +159,8 @@ parse_opt() {
         --disable-NoMoreSIGABRT)
             disable_NoMoreSIGABRT=1
             ;;
-        --backup-activation)
-            backup_activation=1
+        --dump-activation)
+            dump_activation=1
             ;;
         --restore-activation)
             restore_activation=1
@@ -2141,9 +2141,9 @@ if [ "$serial" = "1" ]; then
 else
     boot_args="-v"
 fi
-if [[ ! -e "$dir"/$deviceid/0.0/shsh.shsh2 && ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 && ! -e "$dir"/$deviceid/0.0/disk0.gz ]]; then
+if [[ ! -e "$dir"/$deviceid/0.0/shsh.shsh2 && ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 ]]; then
     if [[ "$restore" == 1 || "$force_activation" == 1 || "$boot" == 1 || "$boot_clean" == 1 ]]; then
-        echo "[*] You need to backup your shit first, please run $0 $version --dump-blobs --backup-activation --dump-nand"
+        echo "[*] You need to dump your activation records first, please run $0 $version --dump-blobs --dump-activation"
         exit 0
     fi
 fi
@@ -2155,13 +2155,7 @@ if [[ ! -e "$dir"/$deviceid/0.0/shsh.shsh2 ]]; then
 fi
 if [[ ! -e "$dir"/$deviceid/0.0/apticket.der || ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 || ! -e "$dir"/$deviceid/0.0/keybags ]]; then
     if [[ "$restore" == 1 || "$force_activation" == 1 || "$boot" == 1 || "$boot_clean" == 1 ]]; then
-        echo "[*] You need to dump your activation records first, please run $0 $version --backup-activation"
-        exit 0
-    fi
-fi
-if [[ ! -e "$dir"/$deviceid/0.0/disk0.gz ]]; then
-    if [[ "$restore" == 1 || "$force_activation" == 1 || "$boot" == 1 || "$boot_clean" == 1 ]]; then
-        echo "[*] You need to dump your nand first, please run $0 $version --dump-nand"
+        echo "[*] You need to dump your activation records first, please run $0 $version --dump-activation"
         exit 0
     fi
 fi
@@ -2191,7 +2185,7 @@ if [[ "$clean" == 1 ]]; then
 fi
 if [ -z "$r" ]; then
     read -p "[*] What iOS/iPadOS version is or what installed on this device prior to downgrade? " r
-    if [[ ! -e "$dir"/$deviceid/0.0/apticket.der || ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 || ! -e "$dir"/$deviceid/0.0/keybags || ! -e "$dir"/$deviceid/0.0/shsh.shsh2 || ! -e "$dir"/$deviceid/0.0/disk0.gz ]]; then
+    if [[ ! -e "$dir"/$deviceid/0.0/apticket.der || ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 || ! -e "$dir"/$deviceid/0.0/keybags || ! -e "$dir"/$deviceid/0.0/shsh.shsh2 ]]; then
         version="$r"
     fi
 fi
@@ -2224,7 +2218,7 @@ if [[ "$boot" == 1 ]]; then
     fi
     exit 0
 fi
-if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activation" == 1 || "$backup_activation" == 1 || "$restore_activation" == 1 || "$dump_nand" == 1 || "$restore_nand" == 1 || "$disable_NoMoreSIGABRT" == 1 || "$NoMoreSIGABRT" == 1 ]]; then
+if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activation" == 1 || "$dump_activation" == 1 || "$restore_activation" == 1 || "$dump_nand" == 1 || "$restore_nand" == 1 || "$disable_NoMoreSIGABRT" == 1 || "$NoMoreSIGABRT" == 1 ]]; then
     _kill_if_running iproxy
     if [[ ! "$restore" == 1 ]]; then
         rdversion="$version"
@@ -3251,7 +3245,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             fi
         fi
         cd "$wd"
-        if [[ "$ramdisk" == 1 || "$dump_blobs" == 1 || "$dump_nand" == 1 || "$backup_activation" == 1 || "$restore_activation" == 1 || "$restore_nand" == 1 || "$disable_NoMoreSIGABRT" == 1 || "$NoMoreSIGABRT" == 1 ]]; then
+        if [[ "$ramdisk" == 1 || "$dump_blobs" == 1 || "$dump_nand" == 1 || "$dump_activation" == 1 || "$restore_activation" == 1 || "$restore_nand" == 1 || "$disable_NoMoreSIGABRT" == 1 || "$NoMoreSIGABRT" == 1 ]]; then
             if [[ "$version" == "16."* || "$version" == "17."* ]]; then
                 pongo=1
             fi
@@ -3439,7 +3433,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 echo "[*] Restored the activation records on your device"
             fi
         fi
-        if [[ "$backup_activation" == 1 ]]; then
+        if [[ "$dump_activation" == 1 ]]; then
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
             if [[ "$r" == "7."* || "$r" == "8."* || "$r" == "9."* || "$r" == "10.0"* || "$r" == "10.1"* || "$r" == "10.2"* ]]; then
