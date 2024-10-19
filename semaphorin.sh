@@ -343,6 +343,20 @@ _wait_for_dfu() {
         done
     fi
 }
+_dfuhelper() {
+    if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPad4"* ]]; then
+        "$bin"/dfuhelper3.sh
+    elif [ "$os" = "Darwin" ]; then
+        if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
+            "$bin"/dfuhelper3.sh
+        fi
+    else
+        if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
+            "$bin"/dfuhelper3.sh
+        fi
+    fi
+    _wait_for_dfu
+}
 _download_ramdisk_boot_files() {
     ipswurl=$(curl -k -sL "https://api.ipsw.me/v4/device/$deviceid?type=ipsw" | "$bin"/jq '.firmwares | .[] | select(.version=="'$3'")' | "$bin"/jq -s '.[0] | .url' --raw-output)
     rm -rf BuildManifest.plist
@@ -2124,9 +2138,6 @@ if [[ "$*" == *"--fix-auto-boot"* ]]; then
     "$bin"/irecovery -c "reset"
     exit 0
 fi 
-#if [[ "$(get_device_mode)" == "dfu" ]]; then
-#    "$bin"/dfuhelper3.sh
-#fi
 if [ "$os" = "Darwin" ]; then
     if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
         "$bin"/dfuhelper.sh
@@ -2440,10 +2451,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             pongo=1
         fi
         cd "$dir"/
-        info "Current nonce"
-        "$bin"/irecovery -q | grep NONC
         generator=$(cat "$dir"/$deviceid/0.0/shsh.shsh2 | grep "0x" | tail -n 1 | cut -d '>' -f 2 | cut -d '<' -f 1)
-        info "Setting nonce to $generator"
         "$bin"/irecovery -c "setenv com.apple.System.boot-nonce $generator"
         sleep 1
         "$bin"/irecovery -c "saveenv"
@@ -2453,24 +2461,8 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         "$bin"/irecovery -c "saveenv"
         sleep 1
         "$bin"/irecovery -c "reset"
-        info "Waiting for device to restart into recovery mode"
         sleep 7
-        info "New nonce"
-        "$bin"/irecovery -q | grep NONC
-        info "The device should now boot into recovery mode"
-        info "Please follow the on screen instructions to put your device back into dfu mode"
-        sleep 5
-        "$bin"/dfuhelper3.sh
-        if [ "$os" = "Darwin" ]; then
-            if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                "$bin"/dfuhelper3.sh
-            fi
-        else
-            if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                "$bin"/dfuhelper3.sh
-            fi
-        fi
-        _wait_for_dfu
+        _dfuhelper
         sudo killall -STOP -c usbd
         if [[ "$cpid" == "0x8001" || "$cpid" == "0x8000" || "$cpid" == "0x8003" ]]; then
             kbag="24A0F3547373C6FED863FC0F321D7FEA216D0258B48413903939DF968CC2C0E571949EFB72DED8B55B8670932CA7A039"
@@ -2491,17 +2483,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         "$bin"/futurerestore -t "$dir"/$deviceid/0.0/shsh.shsh2 --use-pwndfu --skip-blob --serial --rdsk "$dir"/$deviceid/$cpid/$version/rdsk.im4p --rkrn "$dir"/$deviceid/$cpid/$version/rkrn.im4p --latest-sep --latest-baseband "$dir"/$deviceid/$cpid/$version/ipswcfw.ipsw
         if [[ ! "$restore_nand" == 1 ]]; then
             _wait_for_dfu
-            "$bin"/dfuhelper3.sh
-            if [ "$os" = "Darwin" ]; then
-                if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                    "$bin"/dfuhelper3.sh
-                fi
-            else
-                if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                    "$bin"/dfuhelper3.sh
-                fi
-            fi
-            _wait_for_dfu
+            _dfuhelper
             sudo killall -STOP -c usbd
             if [[ "$version" == "7."* || "$version" == "8."* ]]; then
                 if [ "$os" = "Darwin" ]; then
@@ -3116,17 +3098,8 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             if [[ ! -e "$dir"/$deviceid/0.0/activation_records/activation_record.plist || "$force_activation" == 1 ]]; then
                 if [[ "$version" == "9.3"* || "$version" == "10."* || "$version" == "11."* || "$version" == "12."* ||  "$version" == "13."* || "$version" == "14."* ]]; then
                     if [ -e "$dir"/$deviceid/$cpid/$version/iBSS.img4 ]; then
-                        "$bin"/dfuhelper3.sh
-                        if [ "$os" = "Darwin" ]; then
-                            if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                                "$bin"/dfuhelper3.sh
-                            fi
-                        else
-                            if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                                "$bin"/dfuhelper3.sh
-                            fi
-                        fi
                         _wait_for_dfu
+                        _dfuhelper
                         sudo killall -STOP -c usbd
                         cd "$dir"/$deviceid/$cpid/$version
                         _boot
@@ -3138,17 +3111,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     info "When your device gets to the setup screen, put the device back into dfu mode"
                     info "We will then activate your device to allow you to navigate to the home screen"
                     sleep 5
-                    "$bin"/dfuhelper3.sh
-                    if [ "$os" = "Darwin" ]; then
-                        if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                            "$bin"/dfuhelper3.sh
-                        fi
-                    else
-                        if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                            "$bin"/dfuhelper3.sh
-                        fi
-                    fi
-                    _wait_for_dfu
+                    _dfuhelper
                     sudo killall -STOP -c usbd
                     if [[ "$version" == "7."* || "$version" == "8."* ]]; then
                         cd "$dir"/$deviceid/$cpid/ramdisk/8.4.1
@@ -3220,17 +3183,8 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         fi
         _kill_if_running iproxy
         if [ -e "$dir"/$deviceid/$cpid/$version/iBSS.img4 ]; then
-            "$bin"/dfuhelper3.sh
-            if [ "$os" = "Darwin" ]; then
-                if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-                    "$bin"/dfuhelper3.sh
-                fi
-            else
-                if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-                    "$bin"/dfuhelper3.sh
-                fi
-            fi
             _wait_for_dfu
+            _dfuhelper
             sudo killall -STOP -c usbd
             if [[ "$restore_nand" == 1 ]]; then
                 rdversion="$version"
