@@ -1944,6 +1944,33 @@ _download_root_fs() {
     cd ..
     rm -rf work
 }
+_get_ios_ver_prior_to_downgrade() {
+    if [[ -e "$dir"/$deviceid/0.0/SystemVersion.plist ]]; then
+        cd "$dir"/$deviceid/0.0/
+        if [ "$os" = "Darwin" ]; then
+            r="$(/usr/bin/plutil -extract "ProductVersion" xml1 -o - SystemVersion.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)"
+        else
+            r="$("$bin"/PlistBuddy -c "Print ProductVersion" SystemVersion.plist | tr -d '"')"
+        fi
+        info "$r"
+        cd "$dir"/
+    fi
+    if [ -z "$r" ]; then
+        warning "What iOS version is or was installed on this device prior to downgrade?"
+        read r
+        if [[ "$(./java/bin/java -jar ./Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e $r $deviceid)" == "false" ]]; then
+            if [[ ! "$device_os" == "iPadOS" || "$(./java/bin/java -jar ./Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e 12.1 $deviceid)" == "true" ]]; then
+                r=""
+                error "That version does not exist"
+                exit 1
+            fi
+        fi
+        info "$r"
+        if [[ ! -e "$dir"/$deviceid/0.0/apticket.der || ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 || ! -e "$dir"/$deviceid/0.0/keybags || ! -e "$dir"/$deviceid/0.0/shsh.shsh2 ]]; then
+            version="$r"
+        fi
+    fi
+}
 _kill_if_running() {
     if (pgrep -u root -xf "$1" &> /dev/null > /dev/null); then
         sudo killall $1
@@ -2194,12 +2221,7 @@ if [[ "$clean" == 1 ]]; then
     info "Removed the created boot files"
     exit 0
 fi
-if [ -z "$r" ]; then
-    read -p "[*] What iOS/iPadOS version is or what installed on this device prior to downgrade? " r
-    if [[ ! -e "$dir"/$deviceid/0.0/apticket.der || ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 || ! -e "$dir"/$deviceid/0.0/keybags || ! -e "$dir"/$deviceid/0.0/shsh.shsh2 ]]; then
-        version="$r"
-    fi
-fi
+_get_ios_ver_prior_to_downgrade
 if [[ "$version" == "9.3"* || "$version" == "10."* ]]; then
     if [[ ! "$ramdisk" == 1 && ! "$dump_blobs" == 1 && ! "$restore_nand" == 1 ]]; then
         force_activation=1
