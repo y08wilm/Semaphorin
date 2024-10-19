@@ -1,6 +1,6 @@
 #!/bin/bash
-mkdir -p logs
 verbose=1
+{
 os=$(uname)
 maj_ver=$(echo "$os_ver" | awk -F. '{print $1}')
 dir="$(pwd)"
@@ -1998,7 +1998,6 @@ _boot() {
         iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
         key=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ' ' -f 4)
         ivkey="$iv$key"
-        info "$ivkey"
     fi
     pwd
     if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
@@ -2035,7 +2034,6 @@ _boot_ramdisk2() {
         iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
         key=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ' ' -f 4)
         ivkey="$iv$key"
-        info "$ivkey"
     fi
     pwd
     if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
@@ -2424,7 +2422,6 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
             key=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ' ' -f 4)
             ivkey="$iv$key"
-            info "$ivkey"
         fi
         pwd
         if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
@@ -2469,7 +2466,6 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
             key=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ' ' -f 4)
             ivkey="$iv$key"
-            info "$ivkey"
         fi
         pwd
         if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
@@ -3657,3 +3653,4 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         exit 0
     fi
 fi
+} | tee /dev/null
