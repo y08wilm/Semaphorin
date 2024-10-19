@@ -1,28 +1,47 @@
 #!/bin/bash
 mkdir -p logs
-#set -x
 verbose=1
-echo "[*] Command ran:`if [ $EUID = 0 ]; then echo " sudo"; fi` ./semaphorin.sh $@"
 os=$(uname)
 maj_ver=$(echo "$os_ver" | awk -F. '{print $1}')
 dir="$(pwd)"
 bin="$(pwd)/$(uname)"
 sshtars="$(pwd)/sshtars"
-echo "Semaphorin | Version 1.0"
-echo "Written by y08wilm and Mineek | Some code and ramdisk from Nathan"
-echo ""
+printf '%s\n' '#'
+printf '%s\n' '# semaphorin: v2.0.1 '
+printf '%s\n' '#'
+printf '%s\n' '# ========  Made by  ======='
+printf '%s\n' '# Made by: y08wilm, Mineek, Ploosh, edwin170'
+printf '%s\n' '# ======== Thanks to ======='
+printf '%s\n' '# Thanks to: md.0269, TheRealClarity, nikias (libimobiledevice),'
+printf '%s\n' '# exploit3dguy, dora2-ios, LukeZGD, PsychoTea, Nathan, LunarN0v4,'
+printf '%s\n' '# checkra1n team (Siguza, axi0mx, littlelaillo et al.)'
+printf '%s\n' '# =========================='
+printf '%s\n' ''
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+DARK_GRAY='\033[90m'
+LIGHT_CYAN='\033[0;96m'
+DARK_CYAN='\033[0;36m'
+NO_COLOR='\033[0m'
+BOLD='\033[1m'
+error() {
+    printf '%b\n' " - [${DARK_GRAY}$(date +'%m/%d/%y %H:%M:%S')${NO_COLOR}] ${RED}${BOLD}<Error>${NO_COLOR}: ${RED}$1${NO_COLOR}"
+}
+info() {
+    printf '%b\n' " - [${DARK_GRAY}$(date +'%m/%d/%y %H:%M:%S')${NO_COLOR}] ${DARK_CYAN}${BOLD}<Info>${NO_COLOR}: ${DARK_CYAN}$1${NO_COLOR}"
+}
+warning() {
+    printf '%b\n' " - [${DARK_GRAY}$(date +'%m/%d/%y %H:%M:%S')${NO_COLOR}] ${YELLOW}${BOLD}<Warning>${NO_COLOR}: ${YELLOW}$1${NO_COLOR}"
+}
 max_args=1
 arg_count=0
-
-# Check for required commands
 if [ "$os" = 'Linux' ]; then
     linux_cmds='lsusb'
 fi
-
 for cmd in curl unzip python3 git ssh scp killall sudo grep pgrep ${linux_cmds}; do
     if ! command -v "${cmd}" > /dev/null; then
         if [ "$cmd" = "python3" ]; then
-            echo "[-] Command '${cmd}' not installed, please install it!";
+            error "Command '${cmd}' not installed, please install it!";
             if [ "$os" = 'Darwin' ]; then
                 if [ ! -e python-3.11.9-macos11.pkg ]; then
                     curl -k https://www.python.org/ftp/python/3.11.9/python-3.11.9-macos11.pkg -o python-3.11.9-macos11.pkg
@@ -34,7 +53,7 @@ for cmd in curl unzip python3 git ssh scp killall sudo grep pgrep ${linux_cmds};
             fi
         else
             if ! command -v "${cmd}" > /dev/null; then
-                echo "[-] Command '${cmd}' not installed, please install it!";
+                error "Command '${cmd}' not installed, please install it!";
                 cmd_not_found=1
             fi
         fi
@@ -43,14 +62,9 @@ done
 if [ "$cmd_not_found" = "1" ]; then
     exit 1
 fi
-
-# Check for pyimg4
 if ! python3 -c 'import pkgutil; exit(not pkgutil.find_loader("pyimg4"))'; then
     python3 -m pip install pyimg4
 fi
-
-# This would probably go better somewhere else, but I'm not sure where to put it since most of the script is just in functions.
-
 clean_usbmuxd() {
     sudo killall usbmuxd 2>/dev/null
     if [[ $(which systemctl 2>/dev/null) ]]; then
@@ -58,21 +72,20 @@ clean_usbmuxd() {
         sudo systemctl restart usbmuxd
     fi
 }
-
 if [[ $os =~ Darwin ]]; then
-    echo "[*] Running on Darwin..."
+    info "Running on Darwin . . ."
     #sudo xattr -cr .
     os_ver=$(sw_vers -productVersion)
     sudo killall -STOP AMPDevicesAgent AMPDeviceDiscoveryAgent MobileDeviceUpdater
     if [[ $os_ver =~ ^10\.1[3]\.* ]]; then
-        echo "[!] macOS/OS X $os_ver is not supported by this script. Please install macOS 10.14 (Mojave) or later to continue if possible."
+        error "macOS/OS X $os_ver is not supported by this script. Please install macOS 10.14 (Mojave) or later to continue if possible."
         sleep 1
         read -p "[*] You can press the enter key on your keyboard to skip this warning  " r1
     else
-        echo "[*] You are running macOS $os_ver. Continuing..."
+        info "You are running macOS $os_ver. Continuing . . ."
     fi
 elif [[ $os =~ Linux ]]; then
-    echo "[*] Running on Linux..."
+    info "Running on Linux . . ."
     curl -LO https://opensource.apple.com/tarballs/cctools/cctools-927.0.2.tar.gz
     mkdir cctools-tmp
     tar -xzf cctools-927.0.2.tar.gz -C cctools-tmp/
@@ -97,17 +110,16 @@ elif [[ $os =~ Linux ]]; then
     sudo -b $bin/usbmuxd -pf
     trap "clean_usbmuxd" EXIT
 else
-    echo "[!] What operating system are you even using..."
+    error "What operating system are you even using . . ."
     exit 1
 fi
-
 print_help() {
     cat << EOF
-Usage: $0 [VERSION...] [OPTION...]
+Usage:`if [ $EUID = 0 ]; then echo " sudo"; fi` $0 [VERSION...] [OPTION...]
 iOS/iPadOS 7.0.6-9.3 Downgrade & Jailbreak tool for older checkm8 devices using seprmvr64
 Examples:
-    $0 7.0.6 --restore
-    $0 7.0.6 --boot
+   `if [ $EUID = 0 ]; then echo " sudo"; fi` $0 7.0.6 --restore
+   `if [ $EUID = 0 ]; then echo " sudo"; fi` $0 7.0.6 --boot
 
 Main operation mode:
     --help                     Print this help
@@ -200,11 +212,10 @@ parse_opt() {
             exit 0
             ;;
         *)
-            echo "[-] Unknown option $1. Use $0 --help for help."
+            error "Unknown option $1. Use`if [ $EUID = 0 ]; then echo " sudo"; fi` $0 --help for help."
             exit 1;
     esac
 }
-
 parse_arg() {
     arg_count=$((arg_count + 1))
     case "$1" in
@@ -247,7 +258,7 @@ parse_cmdline() {
         elif [ "$arg_count" -lt "$max_args" ]; then
             parse_arg "$arg";
         else
-            echo "[-] Too many arguments. Use $0 --help for help.";
+            error "Too many arguments. Use`if [ $EUID = 0 ]; then echo " sudo"; fi` $0 --help for help.";
             exit 1;
         fi
     done
@@ -299,7 +310,7 @@ get_device_mode() {
     if [ "$device_count" = "0" ]; then
         device_mode=none
     elif [ "$device_count" -ge "2" ]; then
-        echo "[-] Please attach only one device" > /dev/tty
+        error "Please attach only one device" > /dev/tty
         kill -30 0
         exit 1;
     fi
@@ -316,7 +327,7 @@ get_device_mode() {
 _wait_for_dfu() {
     if [ "$os" = "Darwin" ]; then
         if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
-            echo "[*] Waiting for device in DFU mode"
+            info "Waiting for device in DFU mode"
         fi
 
         while ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); do
@@ -324,7 +335,7 @@ _wait_for_dfu() {
         done
     else
         if ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); then
-            echo "[*] Waiting for device in DFU mode"
+            info "Waiting for device in DFU mode"
         fi
 
         while ! (lsusb | cut -d' ' -f6 | grep '05ac:' | cut -d: -f2 | grep 1227 >> /dev/null); do
@@ -1927,7 +1938,7 @@ _download_root_fs() {
         rm -rf krnl.*
         rm -rf *.ipsw
         zip -0 -r "$dir"/$1/$cpid/$3/ipswcfw.ipsw *
-        echo "CFW created"
+        info "CFW created"
         cd "$dir"/work
     fi
     cd ..
@@ -1948,9 +1959,9 @@ _boot() {
         iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
         key=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ' ' -f 4)
         ivkey="$iv$key"
-        pwd
-        echo "$ivkey"
+        info "$ivkey"
     fi
+    pwd
     if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
         "$bin"/ipwnder -p
         sleep 1
@@ -1985,9 +1996,9 @@ _boot_ramdisk2() {
         iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
         key=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ' ' -f 4)
         ivkey="$iv$key"
-        pwd
-        echo "$ivkey"
+        info "$ivkey"
     fi
+    pwd
     if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
         "$bin"/ipwnder -p
         sleep 1
@@ -2027,7 +2038,7 @@ _boot_ramdisk() {
             if [ -e ./RestoreRamDisk1.dmg ]; then
                 if [[ "$cpid" == "0x8001" || "$cpid" == "0x8000" || "$cpid" == "0x8003" ]]; then
                     "$bin"/palera1n -r RestoreRamDisk1.dmg -K checkra1n-kpf-pongo &
-                    echo "Waiting 10 seconds.."
+                    info "Waiting 10 seconds . . ."
                     sleep 10
                     "$bin"/palera1n -r RestoreRamDisk1.dmg -K checkra1n-kpf-pongo
                 else
@@ -2036,7 +2047,7 @@ _boot_ramdisk() {
             else
                 if [[ "$cpid" == "0x8001" || "$cpid" == "0x8000" || "$cpid" == "0x8003" ]]; then
                     "$bin"/palera1n -r RestoreRamDisk.dmg -K checkra1n-kpf-pongo &
-                    echo "Waiting 10 seconds.."
+                    info "Waiting 10 seconds . . ."
                     sleep 10
                     "$bin"/palera1n -r RestoreRamDisk.dmg -K checkra1n-kpf-pongo
                 else
@@ -2071,11 +2082,11 @@ if [[ "$(get_device_mode)" == "normal" ]]; then
     "$bin"/reboot_into_recovery.sh
 fi 
 if [[ "$(get_device_mode)" == "none" ]]; then
-    echo "[-] Please connect a device in recovery mode or dfu mode to continue"
+    error "Please connect a device in recovery mode or dfu mode to continue"
     exit 0
 fi
 if [[ ! "$(get_device_mode)" == "dfu" && ! "$(get_device_mode)" == "recovery" ]]; then
-    echo "[-] You can not run $0 from $(get_device_mode), please put your device into recovery mode"
+    error "You can not run`if [ $EUID = 0 ]; then echo " sudo"; fi` $0 from $(get_device_mode), please put your device into recovery mode"
     exit 0
 fi
 if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
@@ -2114,15 +2125,15 @@ elif [[ "$deviceid" == *"iPod"* ]]; then
 else
     device_os=iOS
 fi
-echo $cpid
-echo $replace
+info $cpid
+info $replace
 boardcfg="$replace"
-echo $deviceid
-echo $device_os
+info $deviceid
+info $device_os
 scid="$cpid"
 if [[ "$cpid" == "0x8000" || "$cpid" == "0x8001" || "$cpid" == 8003 ]]; then
     scid=$(echo $cpid | sed 's/0x/s/g')
-    echo $scid
+    info $scid
 fi
 if [[ "$deviceid" == "iPhone10"* || "$deviceid" == "iPad6"* || "$deviceid" == "iPad7"* ]]; then
     pongo=1
@@ -2143,19 +2154,19 @@ else
 fi
 if [[ ! -e "$dir"/$deviceid/0.0/shsh.shsh2 && ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 ]]; then
     if [[ "$restore" == 1 || "$force_activation" == 1 || "$boot" == 1 || "$boot_clean" == 1 ]]; then
-        echo "[*] You need to dump your activation records first, please run $0 $version --dump-blobs --dump-activation"
+        error "You need to dump your activation records first, please run`if [ $EUID = 0 ]; then echo " sudo"; fi` $0 $version --dump-blobs --dump-activation"
         exit 0
     fi
 fi
 if [[ ! -e "$dir"/$deviceid/0.0/shsh.shsh2 ]]; then
     if [[ "$restore" == 1 || "$force_activation" == 1 || "$boot" == 1 || "$boot_clean" == 1 ]]; then
-        echo "[*] You need to dump your blobs first, please run $0 $version --dump-blobs"
+        error "You need to dump your blobs first, please run`if [ $EUID = 0 ]; then echo " sudo"; fi` $0 $version --dump-blobs"
         exit 0
     fi
 fi
 if [[ ! -e "$dir"/$deviceid/0.0/apticket.der || ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 || ! -e "$dir"/$deviceid/0.0/keybags ]]; then
     if [[ "$restore" == 1 || "$force_activation" == 1 || "$boot" == 1 || "$boot_clean" == 1 ]]; then
-        echo "[*] You need to dump your activation records first, please run $0 $version --dump-activation"
+        error "You need to dump your activation records first, please run`if [ $EUID = 0 ]; then echo " sudo"; fi` $0 $version --dump-activation"
         exit 0
     fi
 fi
@@ -2180,7 +2191,7 @@ if [[ "$clean" == 1 ]]; then
     rm -rf "$dir"/$deviceid/$cpid/$version/devicetree*
     rm -rf "$dir"/$deviceid/$cpid/ramdisk/
     rm -rf "$dir"/work/
-    echo "[*] Removed the created boot files"
+    info "Removed the created boot files"
     exit 0
 fi
 if [ -z "$r" ]; then
@@ -2325,27 +2336,28 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         mkdir -p "$dir"/$deviceid/0.0/
         hit=0
         if [ ! -e "$dir"/$deviceid/0.0/apticket.der ]; then
-            echo "missing ./apticket.der, which is required in order to proceed. exiting.."
+            error "Missing ./apticket.der, which is required in order to proceed. exiting . . ."
             exit 0
         fi
         if [ ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 ]; then
-            echo "missing ./sep-firmware.img4, which is required in order to proceed. exiting.."
+            error "Missing ./sep-firmware.img4, which is required in order to proceed. exiting . . ."
             exit 0
         fi
         if [ ! -e "$dir"/$deviceid/0.0/keybags ]; then
-            echo "missing ./keybags, which is required in order to proceed. exiting.."
+            error "Missing ./keybags, which is required in order to proceed. exiting . . ."
             exit 0
         fi
         if [ ! -e "$dir"/$deviceid/0.0/shsh.shsh2 ]; then
-            echo "missing ./shsh.shsh2, which is required in order to proceed. exiting.."
+            error "Missing ./shsh.shsh2, which is required in order to proceed. exiting . . ."
             exit 0
         fi
         if [ ! -e "$dir"/$deviceid/$cpid/$version/ipswcfw.ipsw ]; then
-            echo "missing ./ipswcfw.ipsw, which is required in order to proceed. exiting.."
+            error "Missing ./ipswcfw.ipsw, which is required in order to proceed. exiting . . ."
             exit 0
         fi
         if [ ! -e "$dir"/$deviceid/0.0/activation_records/activation_record.plist ]; then
-            read -p "missing ./activation_records/activation_record.plist, which is recommended in order to proceed. press enter to continue.. " r1
+            warning "Missing ./activation_records/activation_record.plist, press any key to continue.. "
+            read -n 1
             force_activation=1
         fi
         if [[ "$cpid" == "0x8000" || "$cpid" == "0x8001" || "$cpid" == "0x8003" ]]; then
@@ -2381,9 +2393,9 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
             key=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ' ' -f 4)
             ivkey="$iv$key"
-            pwd
-            echo "$ivkey"
+            info "$ivkey"
         fi
+        pwd
         if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
             "$bin"/ipwnder -p
             sleep 1
@@ -2408,10 +2420,10 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             pongo=1
         fi
         cd "$dir"/
-        echo "Current nonce"
+        info "Current nonce"
         "$bin"/irecovery -q | grep NONC
         generator=$(cat "$dir"/$deviceid/0.0/shsh.shsh2 | grep "0x" | tail -n 1 | cut -d '>' -f 2 | cut -d '<' -f 1)
-        echo "Setting nonce to $generator"
+        info "Setting nonce to $generator"
         "$bin"/irecovery -c "setenv com.apple.System.boot-nonce $generator"
         sleep 1
         "$bin"/irecovery -c "saveenv"
@@ -2421,12 +2433,12 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         "$bin"/irecovery -c "saveenv"
         sleep 1
         "$bin"/irecovery -c "reset"
-        echo "Waiting for device to restart into recovery mode"
+        info "Waiting for device to restart into recovery mode"
         sleep 7
-        echo "New nonce"
+        info "New nonce"
         "$bin"/irecovery -q | grep NONC
-        echo "[*] The device should now boot into recovery mode"
-        echo "[*] Please follow the on screen instructions to put your device back into dfu mode"
+        info "The device should now boot into recovery mode"
+        info "Please follow the on screen instructions to put your device back into dfu mode"
         sleep 5
         "$bin"/dfuhelper3.sh
         if [ "$os" = "Darwin" ]; then
@@ -2445,9 +2457,9 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
             key=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ' ' -f 4)
             ivkey="$iv$key"
-            pwd
-            echo "$ivkey"
+            info "$ivkey"
         fi
+        pwd
         if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
             "$bin"/ipwnder -p
             sleep 1
@@ -2455,19 +2467,6 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         else
             "$bin"/gaster pwn
             "$bin"/gaster reset
-        fi
-        read -p "[*] You may need to unplug and replug your cable, would you like to? " r1
-        if [[ "$r1" == "yes" || "$r1" == "y" ]]; then
-            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-            echo "[*] Waiting 10 seconds before continuing.."
-            sleep 10
-        elif [[ "$r1" == "no" || "$r1" == "n" ]]; then
-            echo "[*] Ok no problem, continuing.."
-        else
-            echo "[*] That was not a response I was expecting, I'm going to treat that as a 'yes'.."
-            read -p "[*] Unplug and replug the end of the cable that is attached to your Mac and then press the Enter key on your keyboard " r1
-            echo "[*] Waiting 10 seconds before continuing.."
-            sleep 10
         fi
         "$bin"/futurerestore -t "$dir"/$deviceid/0.0/shsh.shsh2 --use-pwndfu --skip-blob --serial --rdsk "$dir"/$deviceid/$cpid/$version/rdsk.im4p --rkrn "$dir"/$deviceid/$cpid/$version/rkrn.im4p --latest-sep --latest-baseband "$dir"/$deviceid/$cpid/$version/ipswcfw.ipsw
         rm -rf "$dir"/$deviceid/$cpid/$version/ipswcfw*
@@ -2500,11 +2499,12 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             fi
             _boot_ramdisk $deviceid $replace $r
             cd "$dir"/
-            read -p "[*] Press Enter once your device has fully booted into the SSH ramdisk. " r1
-            echo "[*] Waiting 6 seconds before continuing.."
-            sleep 6
+            _kill_if_running iproxy
             sudo killall -STOP -c usbd
             "$bin"/iproxy 2222 22 &
+            while ! [[ $("$bin"/sshpass -p "alpine" ssh -o StrictHostKeyChecking=no -p2222 root@localhost "echo hello" 2> /dev/null) == "hello" ]]; do
+                sleep 1
+            done
             if [[ "$version" == "7."* || "$version" == "8."* || "$version" == "9."* || "$version" == "10.0"* || "$version" == "10.1"* || "$version" == "10.2"*  ]]; then
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_hfs /dev/disk0s1s1 /mnt1" 2> /dev/null
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs -o suid,dev /dev/disk0s1s2 /mnt2" 2> /dev/null
@@ -2805,10 +2805,10 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 if [[ "$version" == "13."* || "$version" == "14."* ]]; then
                     has_active=$(remote_cmd "ls /mnt6/active" 2> /dev/null)
                     if [ ! "$has_active" = "/mnt6/active" ]; then
-                        echo "[!] Active file does not exist! Please use SSH to create it"
-                        echo "    /mnt6/active should contain the name of the UUID in /mnt6"
-                        echo "    When done, type reboot in the SSH session, then rerun the script"
-                        echo "    ssh root@localhost -p 2222"
+                        error "Active file does not exist! Please use SSH to create it"
+                        error "    /mnt6/active should contain the name of the UUID in /mnt6"
+                        error "    When done, type reboot in the SSH session, then rerun the script"
+                        error "    ssh root@localhost -p 2222"
                         $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
                         _kill_if_running iproxy
                         exit 0
@@ -3114,10 +3114,10 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                         cd "$dir"/
                     fi
                     _kill_if_running iproxy
-                    echo "[*] Step 1 of downwgrading to iOS/iPadOS $version is now done"
-                    echo "[*] The device should now boot without any issue and show a progress bar"
-                    echo "[*] When your device gets to the setup screen, put the device back into dfu mode"
-                    echo "[*] We will then activate your device to allow you to navigate to the home screen"
+                    info "Step 1 of downwgrading to iOS/iPadOS $version is now done"
+                    info "The device should now boot without any issue and show a progress bar"
+                    info "When your device gets to the setup screen, put the device back into dfu mode"
+                    info "We will then activate your device to allow you to navigate to the home screen"
                     sleep 5
                     "$bin"/dfuhelper3.sh
                     if [ "$os" = "Darwin" ]; then
@@ -3142,18 +3142,19 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     fi
                     _boot_ramdisk $deviceid $replace $r
                     cd "$dir"/
-                    read -p "[*] Press Enter once your device has fully booted into the SSH ramdisk " r1
-                    echo "[*] Waiting 6 seconds before continuing.."
-                    sleep 6
+                    _kill_if_running iproxy
                     sudo killall -STOP -c usbd
                     "$bin"/iproxy 2222 22 &
+                    while ! [[ $("$bin"/sshpass -p "alpine" ssh -o StrictHostKeyChecking=no -p2222 root@localhost "echo hello" 2> /dev/null) == "hello" ]]; do
+                        sleep 1
+                    done
                     if [[ "$version" == "9.3"* || "$version" == "10.0"* || "$version" == "10.1"* || "$version" == "10.2"* ]]; then
                         "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s1 /mnt1" 2> /dev/null
                         "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s2 /mnt2" 2> /dev/null
                         # /mnt2/containers/Data/System/58954F59-3AA2-4005-9C5B-172BE4ADEC98/Library/internal/data_ark.plist
                         dataarkplist=$(remote_cmd "/usr/bin/find /mnt2/containers/Data/System -name 'internal'" 2> /dev/null)
                         dataarkplist="$dataarkplist/data_ark.plist"
-                        echo $dataarkplist
+                        info $dataarkplist
                         if [ -e "$dir"/$deviceid/0.0/IC-Info.sisv ]; then
                             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt2/mobile/Library/FairPlay/iTunes_Control/iTunes/"
                             "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/IC-Info.sisv root@localhost:/mnt2/mobile/Library/FairPlay/iTunes_Control/iTunes/IC-Info.sisv 2> /dev/null
@@ -3175,7 +3176,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                         "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/disk0s1s2 /mnt2"
                         # /mnt2/containers/Data/System/58954F59-3AA2-4005-9C5B-172BE4ADEC98/Library/internal/data_ark.plist
                         dataarkplist=$(remote_cmd "/usr/bin/find /mnt2/containers/Data/System -name 'data_ark.plist'" 2> /dev/null)
-                        echo $dataarkplist
+                        info $dataarkplist
                         if [ -e "$dir"/$deviceid/0.0/IC-Info.sisv ]; then
                             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt2/mobile/Library/FairPlay/iTunes_Control/iTunes/"
                             "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/IC-Info.sisv root@localhost:/mnt2/mobile/Library/FairPlay/iTunes_Control/iTunes/IC-Info.sisv 2> /dev/null
@@ -3266,12 +3267,12 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             fi
         fi
         cd "$dir"/
-        read -p "[*] Press Enter once your device has fully booted into the SSH ramdisk " r1
-        echo "[*] Waiting 6 seconds before continuing.."
-        sleep 6
+        _kill_if_running iproxy
         sudo killall -STOP -c usbd
         "$bin"/iproxy 2222 22 &
-        sleep 2
+        while ! [[ $("$bin"/sshpass -p "alpine" ssh -o StrictHostKeyChecking=no -p2222 root@localhost "echo hello" 2> /dev/null) == "hello" ]]; do
+            sleep 1
+        done
         if [[ "$restore_activation" == 1 ]]; then
             if [[ "$r" == "7."* || "$r" == "8."* || "$r" == "9."* || "$r" == "10.0"* || "$r" == "10.1"* || "$r" == "10.2"* ]]; then
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
@@ -3284,7 +3285,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/IC-Info.sisv root@localhost:/mnt1/IC-Info.sisv 2> /dev/null
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cd /mnt1/private/var/mobile/Library/FairPlay/iTunes_Control/iTunes && ln -s ../../../../../../../IC-Info.sisv IC-Info.sisv && stat IC-Info.sisv"
                 else
-                    echo "[-] "$dir"/$deviceid/0.0/IC-Info.sisv does not exist"
+                    error ""$dir"/$deviceid/0.0/IC-Info.sisv does not exist"
                 fi
                 if [ -e "$dir"/$deviceid/0.0/com.apple.commcenter.device_specific_nobackup.plist ]; then
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt1/private/var/wireless/Library/Preferences/"
@@ -3292,7 +3293,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/com.apple.commcenter.device_specific_nobackup.plist root@localhost:/mnt1/com.apple.commcenter.device_specific_nobackup.plist 2> /dev/null
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cd /mnt1/private/var/wireless/Library/Preferences && ln -s ../../../../../com.apple.commcenter.device_specific_nobackup.plist com.apple.commcenter.device_specific_nobackup.plist && stat com.apple.commcenter.device_specific_nobackup.plist"
                 else
-                    echo "[-] "$dir"/$deviceid/0.0/com.apple.commcenter.device_specific_nobackup.plist does not exist"
+                    error ""$dir"/$deviceid/0.0/com.apple.commcenter.device_specific_nobackup.plist does not exist"
                 fi
                 if [[ "$restore_factorydata" == 1 ]]; then
                     if [ -e "$dir"/$deviceid/0.0/com.apple.factorydata ]; then
@@ -3332,7 +3333,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                         "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags -R schg /mnt1/private/var/mobile/Library/mad/activation_records"
                     fi
                 else
-                    echo "[-] "$dir"/$deviceid/0.0/activation_records does not exist"
+                    error ""$dir"/$deviceid/0.0/activation_records does not exist"
                 fi
                 if [[ -e "$dir"/$deviceid/0.0/activation_records/activation_record.plist ]]; then
                     if [ -e "$dir"/$deviceid/0.0/data_ark.plist ]; then
@@ -3341,22 +3342,22 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                         "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cd /mnt1/private/var/root/Library/Lockdown && ln -s ../../../../../data_ark.plist data_ark.plist && stat data_ark.plist"
                         "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/private/var/root/Library/Lockdown/data_ark.plist"
                     else
-                        echo "[-] "$dir"/$deviceid/0.0/data_ark.plist does not exist"
+                        error ""$dir"/$deviceid/0.0/data_ark.plist does not exist"
                     fi
                 else
-                    echo "[-] "$dir"/$deviceid/0.0/activation_records/activation_record.plist does not exist"
+                    error ""$dir"/$deviceid/0.0/activation_records/activation_record.plist does not exist"
                 fi
                 # /mnt1/private/var/containers/Data/System/58954F59-3AA2-4005-9C5B-172BE4ADEC98/Library/internal/data_ark.plist
                 dataarkplist=$(remote_cmd "/usr/bin/find /mnt1/private/var/containers/Data/System -name 'internal'" 2> /dev/null)
                 dataarkplist="$dataarkplist/data_ark.plist"
-                echo $dataarkplist
+                info $dataarkplist
                 if [[ "$version" == "9."* && "$force_activation" == 1 ]]; then
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf $dataarkplist"
                     "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/data_ark.plis_ root@localhost:/mnt1/mob_data_ark.plist
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cd $(remote_cmd "/usr/bin/find /mnt1/private/var/containers/Data/System -name 'internal'" 2> /dev/null) && ln -s ../../../../../../../../mob_data_ark.plist data_ark.plist && stat data_ark.plist"
                 else
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf $dataarkplist"
-                    echo "[*] Removed residual data_ark.plist from $dataarkplist"
+                    info "Removed residual data_ark.plist from $dataarkplist"
                 fi
                 if [[ "$version" == "9.1"* || "$version" == "9.2"* ]]; then
                     if [[ "$version" == "9."* && "$force_activation" == 1 ]]; then
@@ -3373,11 +3374,11 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 fi
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
-                echo "[*] Disabling auto-boot in nvram to prevent effaceable storage issues.."
+                info "Disabling auto-boot in nvram to prevent effaceable storage issues . . ."
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram auto-boot=false" 2> /dev/null
-                echo "[*] You can enable auto-boot again at any time by running $0 $version --fix-auto-boot"
-                echo "[*] Done"
-                echo "[*] Restored the activation records on your device"
+                info "You can enable auto-boot again at any time by running`if [ $EUID = 0 ]; then echo " sudo"; fi` $0 $version --fix-auto-boot"
+                info "Done"
+                info "Restored the activation records on your device"
                 $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
                 _kill_if_running iproxy
                 exit 0
@@ -3389,13 +3390,13 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt2/mobile/Library/FairPlay/iTunes_Control/iTunes/"
                     "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/IC-Info.sisv root@localhost:/mnt2/mobile/Library/FairPlay/iTunes_Control/iTunes/IC-Info.sisv 2> /dev/null
                 else
-                    echo "[-] "$dir"/$deviceid/0.0/IC-Info.sisv does not exist"
+                    error ""$dir"/$deviceid/0.0/IC-Info.sisv does not exist"
                 fi
                 if [ -e "$dir"/$deviceid/0.0/com.apple.commcenter.device_specific_nobackup.plist ]; then
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt2/wireless/Library/Preferences/"
                     "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/com.apple.commcenter.device_specific_nobackup.plist root@localhost:/mnt2/wireless/Library/Preferences/com.apple.commcenter.device_specific_nobackup.plist 2> /dev/null
                 else
-                    echo "[-] "$dir"/$deviceid/0.0/com.apple.commcenter.device_specific_nobackup.plist does not exist"
+                    error ""$dir"/$deviceid/0.0/com.apple.commcenter.device_specific_nobackup.plist does not exist"
                 fi
                 if [[ -e "$dir"/$deviceid/0.0/activation_records ]]; then
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt2/root/Library/Lockdown/activation_records"
@@ -3405,17 +3406,17 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 "$dir"/$deviceid/0.0/activation_records/* root@localhost:/mnt2/mobile/Library/mad/activation_records 2> /dev/null
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags -R schg /mnt2/mobile/Library/mad/activation_records"
                 else
-                    echo "[-] "$dir"/$deviceid/0.0/activation_records does not exist"
+                    error ""$dir"/$deviceid/0.0/activation_records does not exist"
                 fi
                 if [[ -e "$dir"/$deviceid/0.0/activation_records/activation_record.plist ]]; then
                     if [ -e "$dir"/$deviceid/0.0/data_ark.plist ]; then
                         "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/data_ark.plist root@localhost:/mnt2/root/Library/Lockdown/data_ark.plist 2> /dev/null
                         "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt2/root/Library/Lockdown/data_ark.plist"
                     else
-                        echo "[-] "$dir"/$deviceid/0.0/data_ark.plist does not exist"
+                        error ""$dir"/$deviceid/0.0/data_ark.plist does not exist"
                     fi
                 else
-                    echo "[-] "$dir"/$deviceid/0.0/activation_records/activation_record.plist does not exist"
+                    error ""$dir"/$deviceid/0.0/activation_records/activation_record.plist does not exist"
                 fi
                 # /mnt2/containers/Data/System/58954F59-3AA2-4005-9C5B-172BE4ADEC98/Library/internal/data_ark.plist
                 dataarkplist=$(remote_cmd "/usr/bin/find /mnt2/containers/Data/System -name 'data_ark.plist'" 2> /dev/null)
@@ -3425,12 +3426,12 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     # /mnt2/containers/Data/System/58954F59-3AA2-4005-9C5B-172BE4ADEC98/Library
                     if [[ "$folder" == "/mnt2/containers/Data/System"* ]]; then
                         "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf $folder/internal/data_ark.plist"
-                        echo "[*] Removed residual data_ark.plist from $folder/internal/data_ark.plist"
+                        info "Removed residual data_ark.plist from $folder/internal/data_ark.plist"
                     fi
                 fi
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
-                echo "[*] Restored the activation records on your device"
+                info "Restored the activation records on your device"
             fi
         fi
         if [[ "$dump_activation" == 1 ]]; then
@@ -3505,10 +3506,10 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
 			if [[ ! -e "$dir"/$deviceid/0.0/apticket.der ]]; then
 				has_active=$(remote_cmd "ls /mnt6/active" 2> /dev/null)
 				if [ ! "$has_active" = "/mnt6/active" ]; then
-                    echo "[!] Active file does not exist! Please use SSH to create it"
-                    echo "    /mnt6/active should contain the name of the UUID in /mnt6"
-                    echo "    When done, type reboot in the SSH session, then rerun the script"
-                    echo "    ssh root@localhost -p 2222"
+                    error "Active file does not exist! Please use SSH to create it"
+                    error "    /mnt6/active should contain the name of the UUID in /mnt6"
+                    error "    When done, type reboot in the SSH session, then rerun the script"
+                    error "    ssh root@localhost -p 2222"
                     ramdisk=1
                 else
                     active=$(remote_cmd "cat /mnt6/active" 2> /dev/null)
@@ -3525,9 +3526,9 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
             if [[ ! -e "$dir"/$deviceid/0.0/apticket.der || ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 || ! -e "$dir"/$deviceid/0.0/keybags ]]; then
-                echo "[*] An error occured while trying to back up the required files required to downgrade"
+                info "An error occured while trying to back up the required files required to downgrade"
             else
-                echo "[*] Backed up the required files required to downgrade"
+                info "Backed up the required files required to downgrade"
             fi
         fi
         if [[ "$dump_blobs" == 1 ]]; then
@@ -3545,7 +3546,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/System/Library/Caches/apticket.der "$dir"/$deviceid/0.0/apticket.der 2> /dev/null
             fi
             if [[ -e "$dir"/$deviceid/0.0/apticket.der ]]; then
-                echo "$dir"/$deviceid/0.0/apticket.der
+                info "$dir"/$deviceid/0.0/apticket.der
             fi
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
@@ -3562,12 +3563,12 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             # dd if=/dev/sda bs=5M conv=fsync status=progress | gzip -c -9 | ssh user@DestinationIP 'gzip -d | dd of=/dev/sda bs=5M'
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
-            echo "[*] Backing up /dev/disk0 to $dir/$deviceid/0.0/disk0.gz, this may take up to 15 minutes.."
+            info "Backing up /dev/disk0 to $dir/$deviceid/0.0/disk0.gz, this may take up to 15 minutes . . ."
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "dd if=/dev/disk0 bs=64k | gzip -1 -" | dd of=disk0.gz bs=64k
-            echo "[*] Disabling auto-boot in nvram to prevent effaceable storage issues.."
+            info "Disabling auto-boot in nvram to prevent effaceable storage issues . . ."
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram auto-boot=false" 2> /dev/null
-            echo "[*] You can enable auto-boot again at any time by running $0 $version --fix-auto-boot"
-            echo "[*] Done"
+            info "You can enable auto-boot again at any time by running`if [ $EUID = 0 ]; then echo " sudo"; fi` $0 $version --fix-auto-boot"
+            info "Done"
             cd "$dir"/
         fi
         if [[ "$restore_nand" == 1 ]]; then
@@ -3575,15 +3576,15 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             # dd if=/dev/sda bs=5M conv=fsync status=progress | gzip -c -9 | ssh user@DestinationIP 'gzip -d | dd of=/dev/sda bs=5M'
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
-            echo "[*] Restoring /dev/disk0 from $dir/$deviceid/0.0/disk0.gz, this may take up to 15 minutes.."
+            info "Restoring /dev/disk0 from $dir/$deviceid/0.0/disk0.gz, this may take up to 15 minutes . . ."
             dd if=disk0.gz bs=64k | "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "gzip -d | dd of=/dev/disk0 bs=64k"
-            echo "[*] Enabling auto-boot in nvram to allow booting the restored nand after a reboot.."
+            info "Enabling auto-boot in nvram to allow booting the restored nand after a reboot . . ."
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram auto-boot=true" 2> /dev/null
             read -p "would you like to also run oblit on your device to ensure function after nand restore? " r
             if [[ ! "$r" == "no" && ! "$r" == "n" ]]; then
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram oblit-inprogress=5" 2> /dev/null
             fi
-            echo "[*] Done"
+            info "Done"
             cd "$dir"/
         fi
         if [[ "$disable_NoMoreSIGABRT" == 1 ]]; then
@@ -3592,13 +3593,13 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s1 /mnt1" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
-            echo "[*] Disabling NoMoreSIGABRT on /dev/disk0s1s2.."
+            info "Disabling NoMoreSIGABRT on /dev/disk0s1s2 . . ."
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/bin/dd if=/dev/disk0s1s2 of=/mnt1/out.img bs=512 count=8192'
             "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/out.img "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.img
             "$bin"/Kernel64Patcher "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.img "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.patched -o
             "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.patched root@localhost:/mnt1/out.img
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/bin/dd if=/mnt1/out.img of=/dev/disk0s1s2 bs=512 count=8192'
-            echo "[*] Done"
+            info "Done"
         fi
         if [[ "$NoMoreSIGABRT" == 1 ]]; then
             # dd if=/dev/sda bs=5M conv=fsync status=progress | gzip -c -9 | ssh user@DestinationIP 'gzip -d | dd of=/dev/sda bs=5M'
@@ -3606,13 +3607,13 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount -w -t hfs /dev/disk0s1s1 /mnt1" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
-            echo "[*] Enabling NoMoreSIGABRT on /dev/disk0s1s2.."
+            info "Enabling NoMoreSIGABRT on /dev/disk0s1s2 . . ."
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/bin/dd if=/dev/disk0s1s2 of=/mnt1/out.img bs=512 count=8192'
             "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/out.img "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.img
             "$bin"/Kernel64Patcher "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.img "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.patched -n
             "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.patched root@localhost:/mnt1/out.img
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/bin/dd if=/mnt1/out.img of=/dev/disk0s1s2 bs=512 count=8192'
-            echo "[*] Done"
+            info "Done"
         fi
         if [[ "$force_activation" == 1 ]]; then
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
@@ -3628,7 +3629,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 # /mnt2/containers/Data/System/58954F59-3AA2-4005-9C5B-172BE4ADEC98/Library/internal/data_ark.plist
                 dataarkplist=$(remote_cmd "/usr/bin/find /mnt2/containers/Data/System -name 'internal'" 2> /dev/null)
                 dataarkplist="$dataarkplist/data_ark.plist"
-                echo $dataarkplist
+                info $dataarkplist
                 if [ -e "$dir"/$deviceid/0.0/IC-Info.sisv ]; then
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt2/mobile/Library/FairPlay/iTunes_Control/iTunes/"
                     "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/IC-Info.sisv root@localhost:/mnt2/mobile/Library/FairPlay/iTunes_Control/iTunes/IC-Info.sisv 2> /dev/null
@@ -3641,7 +3642,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             else
                 # /mnt2/containers/Data/System/58954F59-3AA2-4005-9C5B-172BE4ADEC98/Library/internal/data_ark.plist
                 dataarkplist=$(remote_cmd "/usr/bin/find /mnt2/containers/Data/System -name 'data_ark.plist'" 2> /dev/null)
-                echo $dataarkplist
+                info $dataarkplist
                 if [ -e "$dir"/$deviceid/0.0/IC-Info.sisv ]; then
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt2/mobile/Library/FairPlay/iTunes_Control/iTunes/"
                     "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/IC-Info.sisv root@localhost:/mnt2/mobile/Library/FairPlay/iTunes_Control/iTunes/IC-Info.sisv 2> /dev/null
@@ -3661,7 +3662,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/usr/sbin/chown -R root:wheel /mnt1/Applications/UnlimFileManager.app'
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/UnlimFileManager.app.tar.gz' 2> /dev/null
             fi
-            echo "[*] Done"
+            info "Done"
         fi
         if [[ "$ramdisk" == 1 ]]; then
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
@@ -3679,7 +3680,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         _kill_if_running iproxy
     else
         _kill_if_running iproxy
-        echo "done"
+        echo "Done"
         exit 0
     fi
 fi
