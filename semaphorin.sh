@@ -1577,9 +1577,9 @@ _download_root_fs() {
     cd "$dir"/work
     rm -rf IM4M
     "$bin"/img4tool -e -s "$dir"/$1/0.0/shsh.shsh2 -m IM4M
-    rm -rf "$dir"/$1/$cpid/$3/ipswcfw
-    mkdir -p "$dir"/$1/$cpid/$3/ipswcfw
     if [ ! -e "$dir"/$1/$cpid/$3/ipswcfw.ipsw ]; then
+        rm -rf "$dir"/$1/$cpid/$3/ipswcfw
+        mkdir -p "$dir"/$1/$cpid/$3/ipswcfw
         local fn
         "$bin"/pzb -g BuildManifest.plist "$ipswurl"
         if [ "$os" = "Darwin" ]; then
@@ -1659,11 +1659,11 @@ _download_root_fs() {
         fi
         # rdsk
         rdskpath=$(plutil -extract "BuildIdentities".0."Manifest"."RestoreRamDisk"."Info"."Path" xml1 -o - BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1 | head -1)
-        cp "$dir"/$1/$cpid/$3/RestoreRamDisk.dmg rdsk.dmg
+        cp "$dir"/$1/$cpid/$3/RestoreRamDisk.dmg work/rdsk.dmg
         mkdir rdmount
-        current_size=$(stat -f %z rdsk.dmg)
-        hdiutil resize -size "$((current_size + 10000000))" rdsk.dmg # 10MB more
-        hdiutil attach -mountpoint rdmount rdsk.dmg
+        current_size=$(stat -f %z work/rdsk.dmg)
+        hdiutil resize -size "$((current_size + 10000000))" work/rdsk.dmg # 10MB more
+        hdiutil attach -mountpoint rdmount work/rdsk.dmg
         if [[ "$3" == "7"* ]]; then
             "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -7
         elif [[ "$3" == "8"* ]]; then
@@ -1710,9 +1710,9 @@ _download_root_fs() {
         chmod 755 ./rdmount/usr/sbin/asr
         hdiutil detach rdmount
         if [[ "$3" == "15"* ]]; then
-            "$bin"/img4tool -c rdsk.im4p -t rdsk rdsk.dmg
+            "$bin"/img4tool -c work/rdsk.im4p -t rdsk work/rdsk.dmg
         else
-            "$bin"/img4 -i rdsk.dmg -o rdsk.im4p -A -T rdsk
+            "$bin"/img4 -i work/rdsk.dmg -o work/rdsk.im4p -A -T rdsk
         fi
         # get build id from version
         cd "$dir"/work
@@ -1720,118 +1720,118 @@ _download_root_fs() {
         cd "$dir"/$1/$cpid/$3/ipswcfw
         # illb
         illbpath="$(awk "/""${replace}""/{x=1}x&&/LLB[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
-        cp "$dir"/$1/$cpid/$3/LLB.dec illb.dec
+        cp "$dir"/$1/$cpid/$3/LLB.dec work/illb.dec
         if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* ]]; then
             if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$3" == "9."* ]]; then
-                "$bin"/kairos illb.dec illb.patched
+                "$bin"/kairos work/illb.dec work/illb.patched
                 if [[ ! "$?" == "0" ]]; then
-                    "$bin"/iBoot64Patcher illb.dec illb.patched
+                    "$bin"/iBoot64Patcher work/illb.dec work/illb.patched
                 fi
             elif [[ "$3" == "9."* ]]; then
-                "$bin"/kairos illb.dec illb.patched
+                "$bin"/kairos work/illb.dec work/illb.patched
                 if [[ ! "$?" == "0" ]]; then
-                    "$bin"/iBoot64Patcher illb.dec illb.patched
+                    "$bin"/iBoot64Patcher work/illb.dec work/illb.patched
                 fi
             else
-                "$bin"/ipatcher illb.dec illb.patched
+                "$bin"/ipatcher work/illb.dec work/illb.patched
             fi
         else
-            "$bin"/iBoot64Patcher illb.dec illb.patched
+            "$bin"/iBoot64Patcher work/illb.dec work/illb.patched
         fi
-        "$bin"/img4 -i illb.patched -o illb.im4p -A -T illb
+        "$bin"/img4 -i work/illb.patched -o work/illb.im4p -A -T illb
         # ibot
         ibotpath="$(awk "/""${replace}""/{x=1}x&&/iBoot[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
-        cp "$dir"/$1/$cpid/$3/iBoot.dec ibot.dec
+        cp "$dir"/$1/$cpid/$3/iBoot.dec work/ibot.dec
         if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* ]]; then
             if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$3" == "9."* ]]; then
-                "$bin"/kairos ibot.dec ibot2.patched -b "rd=md0 debug=0x2014e amfi=0xff cs_enforcement_disable=1 $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`"
+                "$bin"/kairos work/ibot.dec work/ibot2.patched -b "rd=md0 debug=0x2014e amfi=0xff cs_enforcement_disable=1 $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`"
                 if [[ ! "$?" == "0" ]]; then
-                    "$bin"/iBoot64Patcher ibot.dec ibot2.patched -b "rd=md0 debug=0x2014e amfi=0xff cs_enforcement_disable=1 $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`"
+                    "$bin"/iBoot64Patcher work/ibot.dec work/ibot2.patched -b "rd=md0 debug=0x2014e amfi=0xff cs_enforcement_disable=1 $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`"
                 fi
-                "$bin"/iBoot64Patcher2 ibot2.patched ibot.patched -n
+                "$bin"/iBoot64Patcher2 work/ibot2.patched work/ibot.patched -n
                 if [[ ! "$?" == "0" ]]; then
-                    cp ibot2.patched ibot.patched
+                    cp work/ibot2.patched work/ibot.patched
                 fi
             elif [[ "$3" == "9."* ]]; then
-                "$bin"/kairos ibot.dec ibot2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
+                "$bin"/kairos work/ibot.dec work/ibot2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
                 if [[ ! "$?" == "0" ]]; then
-                    "$bin"/iBoot64Patcher ibot.dec ibot2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
+                    "$bin"/iBoot64Patcher work/ibot.dec work/ibot2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
                 fi
-                "$bin"/iBoot64Patcher2 ibot2.patched ibot.patched -n
+                "$bin"/iBoot64Patcher2 work/ibot2.patched work/ibot.patched -n
                 if [[ ! "$?" == "0" ]]; then
-                    cp ibot2.patched ibot.patched
+                    cp work/ibot2.patched work/ibot.patched
                 fi
             else
-                "$bin"/ipatcher ibot.dec ibot.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
+                "$bin"/ipatcher work/ibot.dec work/ibot.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
             fi
         else
             if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* ]]; then
-                "$bin"/iBoot64Patcher ibot.dec ibot.patched -b "rd=md0 debug=0x2014e $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" -n
+                "$bin"/iBoot64Patcher work/ibot.dec work/ibot.patched -b "rd=md0 debug=0x2014e $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" -n
             else
-                "$bin"/iBoot64Patcher ibot.dec ibot.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 amfi_get_out_of_my_way=1 -restore -progress" -n
+                "$bin"/iBoot64Patcher work/ibot.dec work/ibot.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 amfi_get_out_of_my_way=1 -restore -progress" -n
             fi
         fi
-        "$bin"/img4 -i ibot.patched -o ibot.im4p -A -T ibot
+        "$bin"/img4 -i work/ibot.patched -o work/ibot.im4p -A -T ibot
         rm -rf /tmp/futurerestore
         mkdir -p /tmp/futurerestore
         # ibss
         ibsspath="$(awk "/""${replace}""/{x=1}x&&/iBSS[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
-        cp "$dir"/$1/$cpid/$3/iBSS.dec ibss.dec
+        cp "$dir"/$1/$cpid/$3/iBSS.dec work/ibss.dec
         if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* ]]; then
             if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$3" == "9."* ]]; then
-                "$bin"/kairos ibss.dec ibss.patched
+                "$bin"/kairos work/ibss.dec work/ibss.patched
                 if [[ ! "$?" == "0" ]]; then
-                    "$bin"/iBoot64Patcher ibss.dec ibss.patched
+                    "$bin"/iBoot64Patcher work/ibss.dec work/ibss.patched
                 fi
             elif [[ "$3" == "9."* ]]; then
-                "$bin"/kairos ibss.dec ibss.patched
+                "$bin"/kairos work/ibss.dec work/ibss.patched
                 if [[ ! "$?" == "0" ]]; then
-                    "$bin"/iBoot64Patcher ibss.dec ibss.patched
+                    "$bin"/iBoot64Patcher work/ibss.dec work/ibss.patched
                 fi
             else
-                "$bin"/ipatcher ibss.dec ibss.patched
+                "$bin"/ipatcher work/ibss.dec work/ibss.patched
             fi
         else
-            "$bin"/iBoot64Patcher ibss.dec ibss.patched
+            "$bin"/iBoot64Patcher work/ibss.dec work/ibss.patched
         fi
-        "$bin"/img4 -i ibss.patched -o ibss.im4p -A -T ibss
-        "$bin"/img4 -i ibss.patched -o ibss.img4 -M IM4M -A -T ibss
-        cp ibss.img4 /tmp/futurerestore/ibss.$replace.$buildid.patched.img4
+        "$bin"/img4 -i work/ibss.patched -o work/ibss.im4p -A -T ibss
+        "$bin"/img4 -i work/ibss.patched -o work/ibss.img4 -M IM4M -A -T ibss
+        cp work/ibss.img4 /tmp/futurerestore/ibss.$replace.$buildid.patched.img4
         # ibec
         ibecpath="$(awk "/""${replace}""/{x=1}x&&/iBEC[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
-        cp "$dir"/$1/$cpid/$3/iBEC.dec ibec.dec
+        cp "$dir"/$1/$cpid/$3/iBEC.dec work/ibec.dec
         if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* ]]; then
             if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$3" == "9."* ]]; then
-                "$bin"/kairos ibec.dec ibec2.patched -b "rd=md0 debug=0x2014e amfi=0xff cs_enforcement_disable=1 $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`"
+                "$bin"/kairos work/ibec.dec work/ibec2.patched -b "rd=md0 debug=0x2014e amfi=0xff cs_enforcement_disable=1 $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`"
                 if [[ ! "$?" == "0" ]]; then
-                    "$bin"/iBoot64Patcher ibec.dec ibec2.patched -b "rd=md0 debug=0x2014e amfi=0xff cs_enforcement_disable=1 $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`"
+                    "$bin"/iBoot64Patcher work/ibec.dec work/ibec2.patched -b "rd=md0 debug=0x2014e amfi=0xff cs_enforcement_disable=1 $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`"
                 fi
-                "$bin"/iBoot64Patcher2 ibec2.patched ibec.patched -n
+                "$bin"/iBoot64Patcher2 work/ibec2.patched work/ibec.patched -n
                 if [[ ! "$?" == "0" ]]; then
-                    cp ibec2.patched ibec.patched
+                    cp work/ibec2.patched work/ibec.patched
                 fi
             elif [[ "$3" == "9."* ]]; then
-                "$bin"/kairos ibec.dec ibec2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
+                "$bin"/kairos work/ibec.dec work/ibec2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
                 if [[ ! "$?" == "0" ]]; then
-                    "$bin"/iBoot64Patcher ibec.dec ibec2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
+                    "$bin"/iBoot64Patcher work/ibec.dec work/ibec2.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
                 fi
-                "$bin"/iBoot64Patcher2 ibec2.patched ibec.patched -n
+                "$bin"/iBoot64Patcher2 work/ibec2.patched work/ibec.patched -n
                 if [[ ! "$?" == "0" ]]; then
-                    cp ibec2.patched ibec.patched
+                    cp work/ibec2.patched work/ibec.patched
                 fi
             else
-                "$bin"/ipatcher ibec.dec ibec.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
+                "$bin"/ipatcher work/ibec.dec work/ibec.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
             fi
         else
             if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* ]]; then
-                "$bin"/iBoot64Patcher ibec.dec ibec.patched -b "rd=md0 debug=0x2014e $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" -n
+                "$bin"/iBoot64Patcher work/ibec.dec work/ibec.patched -b "rd=md0 debug=0x2014e $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" -n
             else
-                "$bin"/iBoot64Patcher ibec.dec ibec.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 amfi_get_out_of_my_way=1 -restore -progress" -n
+                "$bin"/iBoot64Patcher work/ibec.dec work/ibec.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 amfi_get_out_of_my_way=1 -restore -progress" -n
             fi
         fi
-        "$bin"/img4 -i ibec.patched -o ibec.im4p -A -T ibec
-        "$bin"/img4 -i ibec.patched -o ibec.img4 -M IM4M -A -T ibec
-        cp ibec.img4 "/tmp/futurerestore/ibec.$replace.$buildid.patched.img4"
+        "$bin"/img4 -i work/ibec.patched -o work/ibec.im4p -A -T ibec
+        "$bin"/img4 -i work/ibec.patched -o work/ibec.img4 -M IM4M -A -T ibec
+        cp work/ibec.img4 "/tmp/futurerestore/ibec.$replace.$buildid.patched.img4"
         # dtre
         dtrepath="$(awk "/""${replace}""/{x=1}x&&/DeviceTree[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
         if [[ "$3" == "10."* || "$3" == "11."* || "$3" == "12."* || "$3" == "13."* || "$3" == "14."* ]]; then
@@ -1840,7 +1840,7 @@ _download_root_fs() {
             cp "$dir"/$1/$cpid/$3/DeviceTree.dec work/dtree.raw
         fi
         LC_ALL=C sed -i '' 's/content-protect/mineeek-protect/g' work/dtree.raw
-        "$bin"/img4 -i work/dtree.raw -o dtre.im4p -A -T dtre
+        "$bin"/img4 -i work/dtree.raw -o work/dtre.im4p -A -T dtre
         # rkrn
         rkrnpath="$(awk "/""${replace}""/{x=1}x&&/kernelcache.release/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
         krnlpath="$(awk "/""${replace}""/{x=1}x&&/kernelcache.release/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
@@ -1892,54 +1892,52 @@ _download_root_fs() {
         fi
         "$bin"/kerneldiff work/kcache.raw work/kcache2.raw work/kc.bpatch
         if [[ "$?" == "0" ]]; then
-            "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o rkrn.im4p -T rkrn -P work/kc.bpatch
-            "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o krnl.im4p -T krnl -P work/kc.bpatch
-            "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o rkrn.img4 -M IM4M -T rkrn -P work/kc.bpatch
-            "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o krnl.img4 -M IM4M -T krnl -P work/kc.bpatch
+            "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o work/rkrn.im4p -T rkrn -P work/kc.bpatch
+            "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o work/krnl.im4p -T krnl -P work/kc.bpatch
+            "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o work/rkrn.img4 -M IM4M -T rkrn -P work/kc.bpatch
+            "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o work/krnl.img4 -M IM4M -T krnl -P work/kc.bpatch
         else
             if [[ "$deviceid" == *'iPhone8'* ]] || [[ "$deviceid" == *'iPad6'* ]] || [[ "$deviceid" == *'iPad5'* ]]; then
-                python3 -m pyimg4 im4p create -i work/kcache2.raw -o rkrn.im4p --extra "$dir"/$1/$cpid/$3/kpp.bin -f rkrn --lzss
-                python3 -m pyimg4 im4p create -i work/kcache2.raw -o krnl.im4p --extra "$dir"/$1/$cpid/$3/kpp.bin -f krnl --lzss
+                python3 -m pyimg4 im4p create -i work/kcache2.raw -o work/rkrn.im4p --extra "$dir"/$1/$cpid/$3/kpp.bin -f rkrn --lzss
+                python3 -m pyimg4 im4p create -i work/kcache2.raw -o work/krnl.im4p --extra "$dir"/$1/$cpid/$3/kpp.bin -f krnl --lzss
             else
-                python3 -m pyimg4 im4p create -i work/kcache2.raw -o rkrn.im4p -f rkrn --lzss
-                python3 -m pyimg4 im4p create -i work/kcache2.raw -o krnl.im4p -f krnl --lzss
+                python3 -m pyimg4 im4p create -i work/kcache2.raw -o work/rkrn.im4p -f rkrn --lzss
+                python3 -m pyimg4 im4p create -i work/kcache2.raw -o work/krnl.im4p -f krnl --lzss
             fi
-            python3 -m pyimg4 img4 create -p rkrn.im4p -o rkrn.img4 -m IM4M
-            python3 -m pyimg4 img4 create -p krnl.im4p -o krnl.img4 -m IM4M
+            python3 -m pyimg4 img4 create -p work/rkrn.im4p -o work/rkrn.img4 -m IM4M
+            python3 -m pyimg4 img4 create -p work/krnl.im4p -o work/krnl.img4 -m IM4M
         fi
         if [[ ! "$restore_nand" == "1" ]]; then
             rm -vf "$illbpath"
             rm -vf "$ibotpath"
             rm -vf "$krnlpath"
-            cp -av illb.im4p "$illbpath"
-            cp -av ibot.im4p "$ibotpath"
-            cp -av krnl.im4p "$krnlpath"
+            cp -av work/illb.im4p "$illbpath"
+            cp -av work/ibot.im4p "$ibotpath"
+            cp -av work/krnl.im4p "$krnlpath"
         fi
         rm -vf "$dtrepath"
-        cp -av dtre.im4p "$dtrepath"
+        cp -av work/dtre.im4p "$dtrepath"
         rm -rf "$dir"/$1/$cpid/$3/rdsk.im4p
         rm -rf "$dir"/$1/$cpid/$3/dtre.im4p
         rm -rf "$dir"/$1/$cpid/$3/rkrn.im4p
-        cp -av rdsk.im4p "$dir"/$1/$cpid/$3/rdsk.im4p
-        cp -av dtre.im4p "$dir"/$1/$cpid/$3/dtre.im4p
-        cp -av rkrn.im4p "$dir"/$1/$cpid/$3/rkrn.im4p
+        cp -av work/rdsk.im4p "$dir"/$1/$cpid/$3/rdsk.im4p
+        cp -av work/dtre.im4p "$dir"/$1/$cpid/$3/dtre.im4p
+        cp -av work/rkrn.im4p "$dir"/$1/$cpid/$3/rkrn.im4p
         rm -rf rdmount
         rm -rf work
         rm -rf IM4M
-        rm -rf rdsk.*
-        rm -rf illb.*
-        rm -rf ibot.*
-        rm -rf ibot2.*
-        rm -rf ibss.*
-        rm -rf ibec.*
-        rm -rf ibec2.*
-        rm -rf dtre.*
-        rm -rf rkrn.*
-        rm -rf krnl.*
         rm -rf *.ipsw
         zip -0 -r "$dir"/$1/$cpid/$3/ipswcfw.ipsw *
         info "CFW created"
         cd "$dir"/work
+        rm -rf "$dir"/$1/$cpid/$3/ipswcfw/
+        mkdir -p "$dir"/$1/$cpid/$3/ipswcfw/
+        cp /tmp/futurerestore/ibss.$replace.$buildid.patched.img4 "$dir"/$1/$cpid/$3/ipswcfw/ibss.$replace.$buildid.patched.img4
+        cp /tmp/futurerestore/ibec.$replace.$buildid.patched.img4 "$dir"/$1/$cpid/$3/ipswcfw/ibec.$replace.$buildid.patched.img4
+    else
+        rm -rf /tmp/futurerestore
+        mkdir -p /tmp/futurerestore
+        cp -av "$dir"/$1/$cpid/$3/ipswcfw/* /tmp/futurerestore
     fi
     cd ..
     rm -rf work
@@ -2491,7 +2489,6 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             "$bin"/gaster reset
         fi
         "$bin"/futurerestore -t "$dir"/$deviceid/0.0/shsh.shsh2 --use-pwndfu --skip-blob --serial --rdsk "$dir"/$deviceid/$cpid/$version/rdsk.im4p --rkrn "$dir"/$deviceid/$cpid/$version/rkrn.im4p --latest-sep --latest-baseband "$dir"/$deviceid/$cpid/$version/ipswcfw.ipsw
-        rm -rf "$dir"/$deviceid/$cpid/$version/ipswcfw*
         if [[ ! "$restore_nand" == 1 ]]; then
             _wait_for_dfu
             "$bin"/dfuhelper3.sh
