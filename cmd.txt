@@ -1,0 +1,5 @@
+fuse lock
+sep auto
+xargs -v rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e PE_i_can_has_debugger=1 amfi_get_out_of_my_way=1 amfi_allow_any_signature=1
+xfb
+bootux
