@@ -1,6 +1,6 @@
 #!/bin/bash
 verbose=1
-{
+#{
 os=$(uname)
 maj_ver=$(echo "$os_ver" | awk -F. '{print $1}')
 dir="$(pwd)"
@@ -1993,40 +1993,17 @@ _kill_if_running() {
     fi
 }
 _boot() {
-    if [[ "$cpid" == "0x8001" || "$cpid" == "0x8000" || "$cpid" == "0x8003" ]]; then
-        kbag="24A0F3547373C6FED863FC0F321D7FEA216D0258B48413903939DF968CC2C0E571949EFB72DED8B55B8670932CA7A039"
-        iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
-        key=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ' ' -f 4)
-        ivkey="$iv$key"
-    fi
+    cd "$dir/"
     pwd
-    if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
-        "$bin"/ipwnder -p
-        sleep 1
-        "$bin"/USB\ Prober.app/Contents/Resources/reenumerate -v 0x05ac,0x1227
+    if [[ "$3" == "7."* ]]; then
+        "$bin"/boot.sh $boot_args rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e wdt=-1 PE_i_can_has_debugger=1 amfi_get_out_of_my_way=0x1 amfi_unrestrict_task_for_pid=0x0
+    elif [[ "$3" == "8."* ]]; then
+        "$bin"/boot.sh $boot_args rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e PE_i_can_has_debugger=1
+    elif [[ "$3" == "9."* ]]; then
+        "$bin"/boot.sh $boot_args rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e PE_i_can_has_debugger=1 amfi_get_out_of_my_way=1 amfi_allow_any_signature=1
     else
-        "$bin"/gaster pwn
-        "$bin"/USB\ Prober.app/Contents/Resources/reenumerate -v 0x05ac,0x1227
+        "$bin"/boot.sh $boot_args rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e PE_i_can_has_debugger=1 amfi_get_out_of_my_way=1 amfi_allow_any_signature=1
     fi
-    "$bin"/irecovery -f iBSS.img4
-    sleep 1
-    "$bin"/irecovery -f iBEC.img4
-    sleep 2
-    if [ "$check" = '0x8010' ] || [ "$check" = '0x8015' ] || [ "$check" = '0x8011' ] || [ "$check" = '0x8012' ]; then
-        sleep 1
-        "$bin"/irecovery -c go
-        sleep 2
-    else
-        sleep 1
-    fi
-    "$bin"/irecovery -f devicetree.img4
-    "$bin"/irecovery -c devicetree
-    if [ -e ./trustcache.img4 ]; then
-        "$bin"/irecovery -f trustcache.img4
-        "$bin"/irecovery -c firmware
-    fi
-    "$bin"/irecovery -f kernelcache.img4
-    "$bin"/irecovery -c bootx &
 }
 _boot_ramdisk2() {
     if [[ "$cpid" == "0x8001" || "$cpid" == "0x8000" || "$cpid" == "0x8003" ]]; then
@@ -2071,26 +2048,51 @@ _boot_ramdisk() {
         if [[ "$3" == "16."* || "$3" == "17."* ]]; then
             _download_ramdisk_boot_files $deviceid $replace $3
             cd "$dir"/$deviceid/$cpid/ramdisk/$3
-            cp "$bin"/checkra1n-kpf-pongo .
-            if [ -e ./RestoreRamDisk1.dmg ]; then
-                if [[ "$cpid" == "0x8001" || "$cpid" == "0x8000" || "$cpid" == "0x8003" ]]; then
-                    "$bin"/palera1n -r RestoreRamDisk1.dmg -K checkra1n-kpf-pongo &
-                    info "Waiting 10 seconds . . ."
-                    sleep 10
-                    "$bin"/palera1n -r RestoreRamDisk1.dmg -K checkra1n-kpf-pongo
+            cd "$dir"/
+            pwd
+            "$bin"/ramdisk.sh
+            cd "$bin"/
+            echo "/send $(pwd)/checkra1n-kpf-pongo" | "$bin"/pongoterm
+            echo "modload" | "$bin"/pongoterm
+            rm -rf "$dir"/work
+            mkdir -p "$dir"/work
+            cd "$dir"/work
+            if [ -e "$dir"/$deviceid/$cpid/ramdisk/$3/RestoreRamDisk1.dmg ]; then
+                cp "$dir"/$deviceid/$cpid/ramdisk/$3/RestoreRamDisk1.dmg ./ramdisk.dmg
+            else
+                cp "$dir"/$deviceid/$cpid/ramdisk/$3/RestoreRamDisk.dmg ./ramdisk.dmg
+            fi
+            sz=$(wc -c < ramdisk.dmg | tr -d ' ')
+            if [[ ! -e "$dir"/$deviceid/$cpid/ramdisk/$3/ramdisk.dmg.lzma ]]; then
+                xz --format=lzma -vf6ekT 0 ramdisk.dmg
+                cp ramdisk.dmg.lzma "$dir"/$deviceid/$cpid/ramdisk/$3/ramdisk.dmg.lzma
+            else
+                cp "$dir"/$deviceid/$cpid/ramdisk/$3/ramdisk.dmg.lzma ramdisk.dmg.lzma
+            fi
+            echo "/send $(pwd)/ramdisk.dmg.lzma" | "$bin"/pongoterm
+            echo "ramdisk $sz" | "$bin"/pongoterm
+            cd "$dir"/$deviceid/$cpid/ramdisk/$3
+            rm -rf "$dir"/work
+            echo "fuse lock" | "$bin"/pongoterm
+            echo "sep auto" | "$bin"/pongoterm
+            if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* ]]; then
+                if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$3" == "9."* ]]; then
+                    echo "xargs rd=md0 debug=0x2014e amfi=0xff cs_enforcement_disable=1 $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" | "$bin"/pongoterm
+                elif [[ "$3" == "9."* ]]; then
+                    echo "xargs amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress" | "$bin"/pongoterm
                 else
-                    "$bin"/palera1n -r RestoreRamDisk1.dmg -K checkra1n-kpf-pongo
+                    echo "xargs amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress" | "$bin"/pongoterm
                 fi
             else
-                if [[ "$cpid" == "0x8001" || "$cpid" == "0x8000" || "$cpid" == "0x8003" ]]; then
-                    "$bin"/palera1n -r RestoreRamDisk.dmg -K checkra1n-kpf-pongo &
-                    info "Waiting 10 seconds . . ."
-                    sleep 10
-                    "$bin"/palera1n -r RestoreRamDisk.dmg -K checkra1n-kpf-pongo
+                if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* ]]; then
+                    echo "xargs rd=md0 debug=0x2014e $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" | "$bin"/pongoterm
                 else
-                    "$bin"/palera1n -r RestoreRamDisk.dmg -K checkra1n-kpf-pongo
+                    echo "xargs amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 amfi_get_out_of_my_way=1 -restore -progress" | "$bin"/pongoterm
                 fi
             fi
+            echo "xfb" | "$bin"/pongoterm
+            bash -c "nohup sh -c 'echo "bootux" | "$bin"/pongoterm &' > /dev/null &"
+            #"$bin"/pongoterm
         else
             _boot_ramdisk2
         fi
@@ -2240,7 +2242,7 @@ if [[ "$boot_clean" == 1 ]]; then
     sudo killall -STOP -c usbd
     if [ -e "$dir"/$deviceid/clean/$cpid/$version/iBSS.img4 ]; then
         cd "$dir"/$deviceid/clean/$cpid/$version
-        _boot
+        _boot $deviceid $replace $version
         cd "$dir"/
         exit 0
     fi
@@ -2252,7 +2254,7 @@ if [[ "$boot" == 1 ]]; then
     sudo killall -STOP -c usbd
     if [ -e "$dir"/$deviceid/$cpid/$version/iBSS.img4 ]; then
         cd "$dir"/$deviceid/$cpid/$version
-        _boot
+        _boot $deviceid $replace $version
         cd "$dir"/
         exit 0
     fi
@@ -3098,7 +3100,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                         _dfuhelper
                         sudo killall -STOP -c usbd
                         cd "$dir"/$deviceid/$cpid/$version
-                        _boot
+                        _boot $deviceid $replace $version
                         cd "$dir"/
                     fi
                     _kill_if_running iproxy
@@ -3198,7 +3200,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 pongo=0
             else
                 cd "$dir"/$deviceid/$cpid/$version
-                _boot
+                _boot $deviceid $replace $version
                 cd "$dir"/
             fi
         fi
@@ -3681,4 +3683,4 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         exit 0
     fi
 fi
-} | tee /dev/null
+#} | tee /dev/null

@@ -2,12 +2,6 @@
 os=$(uname)
 dir="$(pwd)"
 bin="$(pwd)/$(uname)"
-echo "$@"
-echo "fuse lock" > cmd.txt
-echo "sep auto" >> cmd.txt
-echo "xargs $@" >> cmd.txt
-echo "xfb" >> cmd.txt
-echo "bootux" >> cmd.txt
 get_device_mode() {
     if [ "$os" = "Darwin" ]; then
         apples="$(system_profiler SPUSBDataType 2> /dev/null | grep -B1 'Vendor ID: 0x05ac' | grep 'Product ID:' | cut -dx -f2 | cut -d' ' -f1 | tail -r)"
@@ -69,7 +63,7 @@ do
         echo "Please connect a device in dfu mode to continue"
     fi
     if [[ "$(get_device_mode)" == "pongo" ]]; then
-        bash -c "nohup sh -c '"$bin"/pongoterm <cmd.txt &' > /dev/null &"
+        #bash -c "nohup sh -c '"$bin"/pongoterm <cmd.txt &' > /dev/null &"
         exit 0
     fi 
     "$bin"/USB\ Prober.app/Contents/Resources/reenumerate -v 0x05ac,0x1227
@@ -77,7 +71,7 @@ do
     while ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null);
     do
         if [[ "$(get_device_mode)" == "pongo" ]]; then
-            bash -c "nohup sh -c '"$bin"/pongoterm <cmd.txt &' > /dev/null &"
+            #bash -c "nohup sh -c '"$bin"/pongoterm <cmd.txt &' > /dev/null &"
             exit 0
         fi 
         echo "Please reconnect your usb cable"
@@ -94,7 +88,7 @@ do
         "$bin"/timeout 4 "$bin"/openra1n-a9 "$bin"/Pongo.bin boot
     fi
     if [[ ! "$?" == "0" ]]; then
-        #exit 0
-        echo "Exploit failed, please reconnect device in dfu mode to continue"
+        #echo "Exploit failed, please reconnect device in dfu mode to continue"
+        exit 1
     fi
 done
