@@ -3488,8 +3488,6 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 root@localhost:/mnt6/$active/usr/local/standalone/firmware/Baseband "$dir"/$deviceid/0.0/Baseband 2> /dev/null
                     "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 root@localhost:/mnt6/$active/usr/standalone/firmware "$dir"/$deviceid/0.0/firmware 2> /dev/null
                     "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 root@localhost:/mnt6/$active/usr/local "$dir"/$deviceid/0.0/local 2> /dev/null
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags -R schg /mnt6/$active/"
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt6/active"
 				fi
 			fi
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
@@ -3514,15 +3512,45 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             if [[ ! -e "$dir"/$deviceid/0.0/apticket.der ]]; then
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/System/Library/Caches/apticket.der "$dir"/$deviceid/0.0/apticket.der 2> /dev/null
             fi
+			if [[ ! -e "$dir"/$deviceid/0.0/apticket.der ]]; then
+				has_active=$(remote_cmd "ls /mnt6/active" 2> /dev/null)
+				if [ ! "$has_active" = "/mnt6/active" ]; then
+                    error "Active file does not exist! Please use SSH to create it"
+                    error "    /mnt6/active should contain the name of the UUID in /mnt6"
+                    error "    When done, type reboot in the SSH session, then rerun the script"
+                    error "    ssh root@localhost -p 2222"
+                    ramdisk=1
+                else
+                    active=$(remote_cmd "cat /mnt6/active" 2> /dev/null)
+                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt6/$active/System/Library/Caches/apticket.der "$dir"/$deviceid/0.0/apticket.der 2> /dev/null
+				fi
+			fi
             if [[ -e "$dir"/$deviceid/0.0/apticket.der ]]; then
                 info "$dir"/$deviceid/0.0/apticket.der
             fi
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
             pwd
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cat /dev/rdisk1" | dd of=dump.raw bs=256 count=$((0x4000))
+            if [ "$os" = 'Darwin' ]; then
+                "$bin"/timeout 5 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cat /dev/rdisk1" | dd of=dump.raw bs=256 count=$((0x4000))
+            else
+                timeout 5 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cat /dev/rdisk1" | dd of=dump.raw bs=256 count=$((0x4000))
+            fi
             stat dump.raw
             "$bin"/img4tool --convert -s dumped.shsh dump.raw
+            if [[ ! "$?" == "0" ]]; then
+                warning "Failed with rdisk1, trying again with rdisk2..."
+                if [ "$os" = 'Darwin' ]; then
+                    "$bin"/timeout 5 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cat /dev/rdisk2" | dd of=dump.raw bs=256 count=$((0x4000))
+                else
+                    timeout 5 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cat /dev/rdisk2" | dd of=dump.raw bs=256 count=$((0x4000))
+                fi
+                stat dump.raw
+                "$bin"/img4tool --convert -s dumped.shsh dump.raw
+                if [[ ! "$?" == "0" ]]; then
+                    error "Failed with rdisk2, cannot continue."
+                fi
+            fi
             stat dumped.shsh
             mv dumped.shsh "$dir"/$deviceid/0.0/shsh.shsh2
             rm -rf dump.raw
