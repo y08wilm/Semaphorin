@@ -2,6 +2,12 @@
 os=$(uname)
 dir="$(pwd)"
 bin="$(pwd)/$(uname)"
+echo "$@"
+echo "fuse lock" > cmd.txt
+echo "sep auto" >> cmd.txt
+echo "xargs $@" >> cmd.txt
+echo "xfb" >> cmd.txt
+echo "bootux" >> cmd.txt
 get_device_mode() {
     if [ "$os" = "Darwin" ]; then
         apples="$(system_profiler SPUSBDataType 2> /dev/null | grep -B1 'Vendor ID: 0x05ac' | grep 'Product ID:' | cut -dx -f2 | cut -d' ' -f1 | tail -r)"
@@ -81,6 +87,7 @@ do
     cpid=$("$bin"/irecovery -q | grep CPID | sed 's/CPID: //')
     if [[ "$cpid" == "0x8010" ]]; then
         "$bin"/timeout 12 "$bin"/openra1n-a10 "$bin"/Pongo.bin
+        sleep 5
         "$bin"/timeout 4 "$bin"/openra1n-a10 "$bin"/Pongo.bin boot
     elif [[ "$cpid" == "0x8003" ]]; then
         "$bin"/timeout 12 "$bin"/openra1n-a9 "$bin"/Pongo.bin
