@@ -543,8 +543,8 @@ _download_ramdisk_boot_files() {
                 sudo diskutil enableOwnership /tmp/ramdisk
                 gzip -d "$sshtars"/ssh.tar.gz
                 sudo "$bin"/gnutar -xvf "$sshtars"/ssh.tar -C /tmp/ramdisk
-                gzip -d "$sshtars"/ploosh.tar.gz
-                sudo "$bin"/gnutar -xvf "$sshtars"/ploosh.tar -C /tmp/ramdisk
+                #gzip -d "$sshtars"/ploosh.tar.gz
+                #sudo "$bin"/gnutar -xvf "$sshtars"/ploosh.tar -C /tmp/ramdisk
                 if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* || "$3" == "10."* || "$3" == "11."* ]]; then
                     # fix scp
                     sudo "$bin"/gnutar -xvf "$bin"/libcharset.1.dylib_libiconv.2.dylib.tar -C /tmp/ramdisk/usr/lib
@@ -601,8 +601,8 @@ _download_ramdisk_boot_files() {
                 sudo diskutil enableOwnership /tmp/ramdisk
                 gzip -d "$sshtars"/ssh.tar.gz
                 sudo "$bin"/gnutar -xvf "$sshtars"/ssh.tar -C /tmp/ramdisk
-                gzip -d "$sshtars"/ploosh.tar.gz
-                sudo "$bin"/gnutar -xvf "$sshtars"/ploosh.tar -C /tmp/ramdisk
+                #gzip -d "$sshtars"/ploosh.tar.gz
+                #sudo "$bin"/gnutar -xvf "$sshtars"/ploosh.tar -C /tmp/ramdisk
                 if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* || "$3" == "10."* || "$3" == "11."* ]]; then
                     # fix scp
                     sudo "$bin"/gnutar -xvf "$bin"/libcharset.1.dylib_libiconv.2.dylib.tar -C /tmp/ramdisk/usr/lib
@@ -665,8 +665,8 @@ _download_ramdisk_boot_files() {
                 fi
                 gzip -d "$sshtars"/ssh.tar.gz
                 "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$sshtars"/ssh.tar
-                gzip -d "$sshtars"/ploosh.tar.gz
-                "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$sshtars"/ploosh.tar
+                #gzip -d "$sshtars"/ploosh.tar.gz
+                #"$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$sshtars"/ploosh.tar
                 if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* || "$3" == "10."* || "$3" == "11."* ]]; then
                     # fix scp
                     "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$bin"/libcharset.1.dylib_libiconv.2.dylib.tar
@@ -717,8 +717,8 @@ _download_ramdisk_boot_files() {
                 fi
                 gzip -d "$sshtars"/ssh.tar.gz
                 "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$sshtars"/ssh.tar
-                gzip -d "$sshtars"/ploosh.tar.gz
-                "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$sshtars"/ploosh.tar
+                #gzip -d "$sshtars"/ploosh.tar.gz
+                #"$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$sshtars"/ploosh.tar
                 if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* || "$3" == "10."* || "$3" == "11."* ]]; then
                     # fix scp
                     "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$bin"/libcharset.1.dylib_libiconv.2.dylib.tar
@@ -2082,26 +2082,25 @@ _boot_ramdisk() {
             echo "/send $(pwd)/ramdisk.dmg.lzma" | "$bin"/pongoterm
             echo "ramdisk $sz" | "$bin"/pongoterm
             cd "$dir"/sshtars
-            echo "/send $(pwd)/binpack.dmg" | "$bin"/pongoterm
-            echo "overlay" | "$bin"/pongoterm
+            #echo "/send $(pwd)/binpack.dmg" | "$bin"/pongoterm
+            #echo "overlay" | "$bin"/pongoterm
             cd "$dir"/$deviceid/$cpid/ramdisk/$3
             rm -rf "$dir"/work
-            #if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* ]]; then
-            #    if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$3" == "9."* ]]; then
-            #        echo "xargs rd=md0 debug=0x2014e amfi=0xff cs_enforcement_disable=1 $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" | "$bin"/pongoterm
-            #    elif [[ "$3" == "9."* ]]; then
-            #        echo "xargs amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress" | "$bin"/pongoterm
-            #    else
-            #        echo "xargs amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress" | "$bin"/pongoterm
-            #    fi
-            #else
-            #    if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* ]]; then
-            #        echo "xargs rd=md0 debug=0x2014e $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" | "$bin"/pongoterm
-            #    else
-            #        echo "xargs amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 amfi_get_out_of_my_way=1 -restore -progress" | "$bin"/pongoterm
-            #    fi
-            #fi
-            echo "xargs serial=3 rd=md0"
+            if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* ]]; then
+                if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$3" == "9."* ]]; then
+                    echo "xargs rd=md0 debug=0x2014e amfi=0xff cs_enforcement_disable=1 $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" | "$bin"/pongoterm
+                elif [[ "$3" == "9."* ]]; then
+                    echo "xargs amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress" | "$bin"/pongoterm
+                else
+                    echo "xargs amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress" | "$bin"/pongoterm
+                fi
+            else
+                if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* ]]; then
+                    echo "xargs rd=md0 debug=0x2014e $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" | "$bin"/pongoterm
+                else
+                    echo "xargs amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 amfi_get_out_of_my_way=1 -restore -progress" | "$bin"/pongoterm
+                fi
+            fi
             echo "xfb" | "$bin"/pongoterm
             bash -c "nohup sh -c 'echo "bootx" | "$bin"/pongoterm &' > /dev/null &"
             #"$bin"/pongoterm
