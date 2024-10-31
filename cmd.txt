@@ -1,9 +1,0 @@
-/send checkra1n-kpf-pongo
-modload
-/send ramdisk.dmg
-ramdisk
-fuse lock
-sep auto
-xargs 
-xfb
-bootux

@@ -2024,10 +2024,10 @@ _boot_ramdisk2() {
     if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
         "$bin"/ipwnder -p
         sleep 1
-        "$bin"/USB\ Prober.app/Contents/Resources/reenumerate -v 0x05ac,0x1227
+        "$bin"/gaster reset
     else
         "$bin"/gaster pwn
-        "$bin"/USB\ Prober.app/Contents/Resources/reenumerate -v 0x05ac,0x1227
+        "$bin"/gaster reset
     fi
     "$bin"/irecovery -f iBSS.img4
     sleep 1
@@ -2440,10 +2440,10 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
             "$bin"/ipwnder -p
             sleep 1
-            "$bin"/USB\ Prober.app/Contents/Resources/reenumerate -v 0x05ac,0x1227
+            "$bin"/gaster reset
         else
             "$bin"/gaster pwn
-            "$bin"/USB\ Prober.app/Contents/Resources/reenumerate -v 0x05ac,0x1227
+            "$bin"/gaster reset
         fi
         "$bin"/irecovery -f iBSS.img4
         sleep 1
@@ -2484,10 +2484,10 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
             "$bin"/ipwnder -p
             sleep 1
-            "$bin"/USB\ Prober.app/Contents/Resources/reenumerate -v 0x05ac,0x1227
+            "$bin"/gaster reset
         else
             "$bin"/gaster pwn
-            "$bin"/USB\ Prober.app/Contents/Resources/reenumerate -v 0x05ac,0x1227
+            "$bin"/gaster reset
         fi
         "$bin"/futurerestore -t "$dir"/$deviceid/0.0/shsh.shsh2 --use-pwndfu --skip-blob --serial --rdsk "$dir"/$deviceid/$cpid/$version/rdsk.im4p --rkrn "$dir"/$deviceid/$cpid/$version/rkrn.im4p --latest-sep --latest-baseband "$dir"/$deviceid/$cpid/$version/ipswcfw.ipsw
         if [[ ! "$restore_nand" == 1 ]]; then
