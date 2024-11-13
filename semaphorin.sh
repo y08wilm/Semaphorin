@@ -2264,18 +2264,7 @@ if [[ "$boot" == 1 ]]; then
 fi
 if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activation" == 1 || "$dump_activation" == 1 || "$restore_activation" == 1 || "$dump_nand" == 1 || "$restore_nand" == 1 || "$disable_NoMoreSIGABRT" == 1 || "$NoMoreSIGABRT" == 1 ]]; then
     _kill_if_running iproxy
-    if [[ ! "$restore" == 1 ]]; then
-        rdversion="$version"
-        if [[ "$version" == "10."* ]]; then
-            rdversion="10.3.3"
-        elif [[ "$version" == "7."* || "$version" == "8."* ]]; then
-            rdversion="8.4.1"
-        fi
-        _download_ramdisk_boot_files $deviceid $replace $rdversion
-        sleep 1
-        sudo killall -STOP -c usbd
-        cd "$dir"/$deviceid/$cpid/ramdisk/$rdversion
-    else
+    if [[ "$restore" == 1 ]]; then
         _download_boot_files $deviceid $replace $version
         if [[ "$restore" == 1 ]]; then
             _download_root_fs $deviceid $replace $version
@@ -2315,11 +2304,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             cd "$dir"/$deviceid/$cpid/ramdisk/11.4
         fi
     fi
-    wd="$(pwd)"
     if [[ "$restore" == 1 ]]; then
-        if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram auto-boot=false" 2> /dev/null
-        fi
         mkdir -p "$dir"/$deviceid/0.0/
         hit=0
         if [ ! -e "$dir"/$deviceid/0.0/apticket.der ]; then
@@ -3035,9 +3020,6 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 #"$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -14
                 #"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt1/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
             fi
-            if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram auto-boot=false" 2> /dev/null
-            fi
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt3" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt1" 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/umount /mnt2" 2> /dev/null
@@ -3163,8 +3145,20 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         fi
     fi
     if [[ ! "$restore" == 1 ]]; then
-        cd "$wd"
+        sleep 1
+        sudo killall -STOP -c usbd
+        rdversion="$version"
+        if [[ "$version" == "10."* ]]; then
+            rdversion="10.3.3"
+        elif [[ "$version" == "7."* || "$version" == "8."* ]]; then
+            rdversion="8.4.1"
+        fi
+        # only boots $r ramdisk if files required to downgrade arent backed up
+        # and ios version prior to downgrade is said to be >=16.0
         _download_ramdisk_boot_files $deviceid $replace $r
+        # otherwise boots $rdversion ramdisk
+        _download_ramdisk_boot_files $deviceid $replace $rdversion
+        cd "$dir"/$deviceid/$cpid/ramdisk/$rdversion
         _boot_ramdisk $deviceid $replace $r
         cd "$dir"/
         _kill_if_running iproxy
