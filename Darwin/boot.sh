@@ -86,6 +86,9 @@ do
     elif [[ "$cpid" == "0x8003" ]]; then
         "$bin"/timeout 12 "$bin"/openra1n-a9 "$bin"/Pongo.bin
         "$bin"/timeout 4 "$bin"/openra1n-a9 "$bin"/Pongo.bin boot
+    elif [[ "$cpid" == "0x8001" ]]; then
+        "$bin"/timeout 12 "$bin"/openra1n-a9x "$bin"/Pongo.bin
+        "$bin"/timeout 4 "$bin"/openra1n-a9x "$bin"/Pongo.bin boot
     fi
     if [[ ! "$?" == "0" ]]; then
         #echo "Exploit failed, please reconnect device in dfu mode to continue"
