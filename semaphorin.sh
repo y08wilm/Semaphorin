@@ -338,7 +338,7 @@ _wait_for_dfu() {
     fi
 }
 _dfuhelper() {
-    if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPad4"* ]]; then
+    if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPad4"* && ! "$cpid" == "0x8015" ]]; then
         "$bin"/dfuhelper3.sh
     elif [ "$os" = "Darwin" ]; then
         if ! (system_profiler SPUSBDataType 2> /dev/null | grep ' Apple Mobile Device (DFU Mode)' >> /dev/null); then
@@ -1993,17 +1993,63 @@ _kill_if_running() {
     fi
 }
 _boot() {
-    cd "$dir/"
-    pwd
-    if [[ "$3" == "7."* ]]; then
-        "$bin"/boot.sh $boot_args rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e wdt=-1 PE_i_can_has_debugger=1 amfi_get_out_of_my_way=0x1 amfi_unrestrict_task_for_pid=0x0
-    elif [[ "$3" == "8."* ]]; then
-        "$bin"/boot.sh $boot_args rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e PE_i_can_has_debugger=1
-    elif [[ "$3" == "9."* ]]; then
-        "$bin"/boot.sh $boot_args rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e PE_i_can_has_debugger=1 amfi_get_out_of_my_way=1 amfi_allow_any_signature=1
+    if [[ "$cpid" == "0x8003" || "$cpid" == "0x8000" || "$cpid" == "0x8010" || "$cpid" == "0x8015" ]]; then
+        cd "$dir/"
+        pwd
+        "$bin"/boot.sh
+        echo "fuse lock" | "$bin"/pongoterm
+        echo "sep auto" | "$bin"/pongoterm
+        if [[ "$3" == "7."* ]]; then
+            echo "xargs $boot_args rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e wdt=-1 PE_i_can_has_debugger=1 amfi_get_out_of_my_way=0x1 amfi_unrestrict_task_for_pid=0x0" | "$bin"/pongoterm
+        elif [[ "$3" == "8."* ]]; then
+            echo "xargs $boot_args rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e PE_i_can_has_debugger=1" | "$bin"/pongoterm
+        elif [[ "$3" == "9."* ]]; then
+            echo "xargs rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e PE_i_can_has_debugger=1 amfi_get_out_of_my_way=1 amfi_allow_any_signature=1" | "$bin"/pongoterm
+        else
+            echo "xargs rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e PE_i_can_has_debugger=1 amfi_get_out_of_my_way=1 amfi_allow_any_signature=1" | "$bin"/pongoterm
+        fi
+        echo "xfb" | "$bin"/pongoterm
+        bash -c "nohup sh -c 'echo "bootux" | "$bin"/pongoterm &' > /dev/null &"
     else
-        "$bin"/boot.sh $boot_args rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e PE_i_can_has_debugger=1 amfi_get_out_of_my_way=1 amfi_allow_any_signature=1
+        _boot_legacy $1 $cpid $3
     fi
+}
+_boot_legacy() {
+    if [[ "$cpid" == "0x8001" || "$cpid" == "0x8000" || "$cpid" == "0x8003" ]]; then
+        kbag="24A0F3547373C6FED863FC0F321D7FEA216D0258B48413903939DF968CC2C0E571949EFB72DED8B55B8670932CA7A039"
+        iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
+        key=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ' ' -f 4)
+        ivkey="$iv$key"
+        pwd
+        echo "$ivkey"
+    fi
+    if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
+        "$bin"/ipwnder -p
+        sleep 1
+        "$bin"/gaster reset
+    else
+        "$bin"/gaster pwn
+        "$bin"/gaster reset
+    fi
+    "$bin"/irecovery -f iBSS.img4
+    sleep 1
+    "$bin"/irecovery -f iBEC.img4
+    sleep 2
+    if [ "$check" = '0x8010' ] || [ "$check" = '0x8015' ] || [ "$check" = '0x8011' ] || [ "$check" = '0x8012' ]; then
+        sleep 1
+        "$bin"/irecovery -c go
+        sleep 2
+    else
+        sleep 1
+    fi
+    "$bin"/irecovery -f devicetree.img4
+    "$bin"/irecovery -c devicetree
+    if [ -e ./trustcache.img4 ]; then
+        "$bin"/irecovery -f trustcache.img4
+        "$bin"/irecovery -c firmware
+    fi
+    "$bin"/irecovery -f kernelcache.img4
+    "$bin"/irecovery -c bootx &
 }
 _boot_ramdisk2() {
     if [[ "$cpid" == "0x8001" || "$cpid" == "0x8000" || "$cpid" == "0x8003" ]]; then
@@ -2053,58 +2099,97 @@ _boot_ramdisk() {
     else
         pongo=0
     fi
+    if [[ "$cpid" == "0x8015" ]]; then
+        pongo=1
+    fi
+    if [[ "$pongo" == 1 ]]; then
+        if [[ "$3" == "16."* || "$3" == "17."* ]]; then
+            if [[ "$cpid" == "0x8003" || "$cpid" == "0x8000" || "$cpid" == "0x8010" || "$cpid" == "0x8015" ]]; then
+                _download_ramdisk_boot_files $deviceid $replace $3
+                cd "$dir"/$deviceid/$cpid/ramdisk/$3
+                cd "$dir"/
+                pwd
+                "$bin"/boot.sh
+                echo "fuse lock" | "$bin"/pongoterm
+                echo "sep auto" | "$bin"/pongoterm
+                cd "$bin"/
+                echo "/send $(pwd)/checkra1n-kpf-pongo" | "$bin"/pongoterm
+                echo "modload" | "$bin"/pongoterm
+                rm -rf "$dir"/work
+                mkdir -p "$dir"/work
+                cd "$dir"/work
+                if [ -e "$dir"/$deviceid/$cpid/ramdisk/$3/RestoreRamDisk1.dmg ]; then
+                    cp "$dir"/$deviceid/$cpid/ramdisk/$3/RestoreRamDisk1.dmg ./ramdisk.dmg
+                else
+                    cp "$dir"/$deviceid/$cpid/ramdisk/$3/RestoreRamDisk.dmg ./ramdisk.dmg
+                fi
+                sz=$(wc -c < ramdisk.dmg | tr -d ' ')
+                if [[ ! -e "$dir"/$deviceid/$cpid/ramdisk/$3/ramdisk.dmg.lzma ]]; then
+                    xz --format=lzma -vf6ekT 0 ramdisk.dmg
+                    cp ramdisk.dmg.lzma "$dir"/$deviceid/$cpid/ramdisk/$3/ramdisk.dmg.lzma
+                else
+                    cp "$dir"/$deviceid/$cpid/ramdisk/$3/ramdisk.dmg.lzma ramdisk.dmg.lzma
+                fi
+                echo "/send $(pwd)/ramdisk.dmg.lzma" | "$bin"/pongoterm
+                echo "ramdisk $sz" | "$bin"/pongoterm
+                cd "$dir"/sshtars
+                #echo "/send $(pwd)/binpack.dmg" | "$bin"/pongoterm
+                #echo "overlay" | "$bin"/pongoterm
+                cd "$dir"/$deviceid/$cpid/ramdisk/$3
+                rm -rf "$dir"/work
+                if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* ]]; then
+                    if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$3" == "9."* ]]; then
+                        echo "xargs rd=md0 debug=0x2014e amfi=0xff cs_enforcement_disable=1 $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" | "$bin"/pongoterm
+                    elif [[ "$3" == "9."* ]]; then
+                        echo "xargs amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress" | "$bin"/pongoterm
+                    else
+                        echo "xargs amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress" | "$bin"/pongoterm
+                    fi
+                else
+                    if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* ]]; then
+                        echo "xargs rd=md0 debug=0x2014e $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" | "$bin"/pongoterm
+                    else
+                        echo "xargs amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 amfi_get_out_of_my_way=1 -restore -progress" | "$bin"/pongoterm
+                    fi
+                fi
+                echo "xfb" | "$bin"/pongoterm
+                bash -c "nohup sh -c 'echo "bootx" | "$bin"/pongoterm &' > /dev/null &"
+                #"$bin"/pongoterm
+            else
+                _boot_ramdisk_legacy $1 $cpid $3
+            fi
+        else
+            _boot_ramdisk2
+        fi
+    else
+        _boot_ramdisk2
+    fi
+}
+_boot_ramdisk_legacy() {
     if [[ "$pongo" == 1 ]]; then
         if [[ "$3" == "16."* || "$3" == "17."* ]]; then
             _download_ramdisk_boot_files $deviceid $replace $3
             cd "$dir"/$deviceid/$cpid/ramdisk/$3
-            cd "$dir"/
-            pwd
-            "$bin"/ramdisk.sh
-            echo "fuse lock" | "$bin"/pongoterm
-            echo "sep auto" | "$bin"/pongoterm
-            cd "$bin"/
-            echo "/send $(pwd)/checkra1n-kpf-pongo" | "$bin"/pongoterm
-            echo "modload" | "$bin"/pongoterm
-            rm -rf "$dir"/work
-            mkdir -p "$dir"/work
-            cd "$dir"/work
-            if [ -e "$dir"/$deviceid/$cpid/ramdisk/$3/RestoreRamDisk1.dmg ]; then
-                cp "$dir"/$deviceid/$cpid/ramdisk/$3/RestoreRamDisk1.dmg ./ramdisk.dmg
-            else
-                cp "$dir"/$deviceid/$cpid/ramdisk/$3/RestoreRamDisk.dmg ./ramdisk.dmg
-            fi
-            sz=$(wc -c < ramdisk.dmg | tr -d ' ')
-            if [[ ! -e "$dir"/$deviceid/$cpid/ramdisk/$3/ramdisk.dmg.lzma ]]; then
-                xz --format=lzma -vf6ekT 0 ramdisk.dmg
-                cp ramdisk.dmg.lzma "$dir"/$deviceid/$cpid/ramdisk/$3/ramdisk.dmg.lzma
-            else
-                cp "$dir"/$deviceid/$cpid/ramdisk/$3/ramdisk.dmg.lzma ramdisk.dmg.lzma
-            fi
-            echo "/send $(pwd)/ramdisk.dmg.lzma" | "$bin"/pongoterm
-            echo "ramdisk $sz" | "$bin"/pongoterm
-            cd "$dir"/sshtars
-            #echo "/send $(pwd)/binpack.dmg" | "$bin"/pongoterm
-            #echo "overlay" | "$bin"/pongoterm
-            cd "$dir"/$deviceid/$cpid/ramdisk/$3
-            rm -rf "$dir"/work
-            if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* ]]; then
-                if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$3" == "9."* ]]; then
-                    echo "xargs rd=md0 debug=0x2014e amfi=0xff cs_enforcement_disable=1 $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" | "$bin"/pongoterm
-                elif [[ "$3" == "9."* ]]; then
-                    echo "xargs amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress" | "$bin"/pongoterm
+            cp "$bin"/checkra1n-kpf-pongo .
+            if [ -e ./RestoreRamDisk1.dmg ]; then
+                if [[ "$cpid" == "0x8001" || "$cpid" == "0x8000" || "$cpid" == "0x8003" ]]; then
+                    "$bin"/palera1n -r RestoreRamDisk1.dmg -K checkra1n-kpf-pongo &
+                    echo "Waiting 10 seconds.."
+                    sleep 10
+                    "$bin"/palera1n -r RestoreRamDisk1.dmg -K checkra1n-kpf-pongo
                 else
-                    echo "xargs amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress" | "$bin"/pongoterm
+                    "$bin"/palera1n -r RestoreRamDisk1.dmg -K checkra1n-kpf-pongo
                 fi
             else
-                if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* ]]; then
-                    echo "xargs rd=md0 debug=0x2014e $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" | "$bin"/pongoterm
+                if [[ "$cpid" == "0x8001" || "$cpid" == "0x8000" || "$cpid" == "0x8003" ]]; then
+                    "$bin"/palera1n -r RestoreRamDisk.dmg -K checkra1n-kpf-pongo &
+                    echo "Waiting 10 seconds.."
+                    sleep 10
+                    "$bin"/palera1n -r RestoreRamDisk.dmg -K checkra1n-kpf-pongo
                 else
-                    echo "xargs amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 amfi_get_out_of_my_way=1 -restore -progress" | "$bin"/pongoterm
+                    "$bin"/palera1n -r RestoreRamDisk.dmg -K checkra1n-kpf-pongo
                 fi
             fi
-            echo "xfb" | "$bin"/pongoterm
-            bash -c "nohup sh -c 'echo "bootx" | "$bin"/pongoterm &' > /dev/null &"
-            #"$bin"/pongoterm
         else
             _boot_ramdisk2
         fi
@@ -2271,38 +2356,6 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         fi
         sleep 1
         sudo killall -STOP -c usbd
-        if [[ ! -e "$dir"/$deviceid/0.0/apticket.der || ! -e "$dir"/$deviceid/0.0/sep-firmware.img4 || ! -e "$dir"/$deviceid/0.0/keybags ]]; then
-            _download_ramdisk_boot_files $deviceid $replace $r
-            cd "$dir"/$deviceid/$cpid/ramdisk/$r
-        elif [[ "$version" == "7."* || "$version" == "8."* ]]; then
-            if [ "$os" = "Darwin" ]; then
-                _download_ramdisk_boot_files $deviceid $replace 8.4.1
-                cd "$dir"/$deviceid/$cpid/ramdisk/8.4.1
-            else
-                _download_ramdisk_boot_files $deviceid $replace 11.4
-                cd "$dir"/$deviceid/$cpid/ramdisk/11.4
-            fi
-        elif [[ "$version" == "10.3"* ]]; then
-            _download_ramdisk_boot_files $deviceid $replace 10.3.3
-            cd "$dir"/$deviceid/$cpid/ramdisk/10.3.3
-        elif [[ "$version" == "11."* || "$version" == "12."* || "$version" == "13."* || "$version" == "14."* ]]; then
-            if [[ "$(./java/bin/java -jar ./Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e 14.3 $deviceid)" == "true" ]]; then
-                _download_ramdisk_boot_files $deviceid $replace 14.3
-                cd "$dir"/$deviceid/$cpid/ramdisk/14.3
-            elif [[ "$deviceid" == "iPad"* && ! "$deviceid" == "iPad4"* ]]; then
-                _download_ramdisk_boot_files $deviceid $replace 14.3
-                cd "$dir"/$deviceid/$cpid/ramdisk/14.3
-            else
-                _download_ramdisk_boot_files $deviceid $replace 12.5.4
-                cd "$dir"/$deviceid/$cpid/ramdisk/12.5.4
-            fi
-        elif [[ "$os" = "Darwin" && ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$version" == "9."* ]]; then
-            _download_ramdisk_boot_files $deviceid $replace 9.3
-            cd "$dir"/$deviceid/$cpid/ramdisk/9.3
-        else
-            _download_ramdisk_boot_files $deviceid $replace 11.4
-            cd "$dir"/$deviceid/$cpid/ramdisk/11.4
-        fi
     fi
     if [[ "$restore" == 1 ]]; then
         mkdir -p "$dir"/$deviceid/0.0/
@@ -2334,56 +2387,58 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         fi
         _wait_for_dfu
         sudo killall -STOP -c usbd
-        if [[ "$version" == "10."* ]]; then
-            rdversion="10.3.3"
-        elif [[ "$version" == "7."* || "$version" == "8."* ]]; then
-            #rdversion="8.4.1"
-            rdversion="9.3"
-        elif [[ "$os" = "Darwin" && ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$version" == "9."* ]]; then
-            rdversion="9.3"
-        else
-            rdversion="$version"
-        fi
-        _download_ramdisk_boot_files $deviceid $replace $rdversion
-        cd "$dir"/$deviceid/$cpid/ramdisk/$rdversion
-        if [[ "$cpid" == "0x8001" || "$cpid" == "0x8000" || "$cpid" == "0x8003" ]]; then
-            kbag="24A0F3547373C6FED863FC0F321D7FEA216D0258B48413903939DF968CC2C0E571949EFB72DED8B55B8670932CA7A039"
-            iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
-            key=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ' ' -f 4)
-            ivkey="$iv$key"
-        fi
-        pwd
-        if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
-            "$bin"/ipwnder -p
+        if [[ ! "$cpid" == "0x8015" ]]; then
+            if [[ "$version" == "10."* ]]; then
+                rdversion="10.3.3"
+            elif [[ "$version" == "7."* || "$version" == "8."* ]]; then
+                #rdversion="8.4.1"
+                rdversion="9.3"
+            elif [[ "$os" = "Darwin" && ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && "$version" == "9."* ]]; then
+                rdversion="9.3"
+            else
+                rdversion="$version"
+            fi
+            _download_ramdisk_boot_files $deviceid $replace $rdversion
+            cd "$dir"/$deviceid/$cpid/ramdisk/$rdversion
+            if [[ "$cpid" == "0x8001" || "$cpid" == "0x8000" || "$cpid" == "0x8003" ]]; then
+                kbag="24A0F3547373C6FED863FC0F321D7FEA216D0258B48413903939DF968CC2C0E571949EFB72DED8B55B8670932CA7A039"
+                iv=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ',' -f 1 | cut -d ' ' -f 2)
+                key=$("$bin"/gaster decrypt_kbag $kbag | tail -n 1 | cut -d ' ' -f 4)
+                ivkey="$iv$key"
+            fi
+            pwd
+            if [[ "$deviceid" == "iPhone6"* || "$deviceid" == "iPad4"* ]]; then
+                "$bin"/ipwnder -p
+                sleep 1
+                "$bin"/gaster reset
+            else
+                "$bin"/gaster pwn
+                "$bin"/gaster reset
+            fi
+            "$bin"/irecovery -f iBSS.img4
             sleep 1
-            "$bin"/gaster reset
-        else
-            "$bin"/gaster pwn
-            "$bin"/gaster reset
-        fi
-        "$bin"/irecovery -f iBSS.img4
-        sleep 1
-        "$bin"/irecovery -f iBEC.img4
-        sleep 2
-        if [ "$check" = '0x8010' ] || [ "$check" = '0x8015' ] || [ "$check" = '0x8011' ] || [ "$check" = '0x8012' ]; then
-            sleep 1
-            "$bin"/irecovery -c go
+            "$bin"/irecovery -f iBEC.img4
             sleep 2
-        else
+            if [ "$check" = '0x8010' ] || [ "$check" = '0x8015' ] || [ "$check" = '0x8011' ] || [ "$check" = '0x8012' ]; then
+                sleep 1
+                "$bin"/irecovery -c go
+                sleep 2
+            else
+                sleep 1
+            fi
+            cd "$dir"/
+            generator=$(cat "$dir"/$deviceid/0.0/shsh.shsh2 | grep "0x" | tail -n 1 | cut -d '>' -f 2 | cut -d '<' -f 1)
+            "$bin"/irecovery -c "setenv com.apple.System.boot-nonce $generator"
             sleep 1
+            "$bin"/irecovery -c "saveenv"
+            sleep 1
+            "$bin"/irecovery -c "setenv auto-boot false"
+            sleep 1
+            "$bin"/irecovery -c "saveenv"
+            sleep 1
+            "$bin"/irecovery -c "reset"
+            sleep 7
         fi
-        cd "$dir"/
-        generator=$(cat "$dir"/$deviceid/0.0/shsh.shsh2 | grep "0x" | tail -n 1 | cut -d '>' -f 2 | cut -d '<' -f 1)
-        "$bin"/irecovery -c "setenv com.apple.System.boot-nonce $generator"
-        sleep 1
-        "$bin"/irecovery -c "saveenv"
-        sleep 1
-        "$bin"/irecovery -c "setenv auto-boot false"
-        sleep 1
-        "$bin"/irecovery -c "saveenv"
-        sleep 1
-        "$bin"/irecovery -c "reset"
-        sleep 7
         _dfuhelper
         sudo killall -STOP -c usbd
         if [[ "$cpid" == "0x8001" || "$cpid" == "0x8000" || "$cpid" == "0x8003" ]]; then
@@ -2405,7 +2460,11 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         _wait_for_dfu
         _dfuhelper
         sudo killall -STOP -c usbd
-        if [[ "$version" == "7."* || "$version" == "8."* ]]; then
+        if [[ "$cpid" == "0x8015" ]]; then
+            _download_ramdisk_boot_files $deviceid $replace $version
+            cd "$dir"/$deviceid/$cpid/ramdisk/$version
+            _boot_ramdisk $deviceid $replace $version
+        elif [[ "$version" == "7."* || "$version" == "8."* ]]; then
             _download_ramdisk_boot_files $deviceid $replace 8.4.1
             cd "$dir"/$deviceid/$cpid/ramdisk/8.4.1
             _boot_ramdisk $deviceid $replace 8.4.1
@@ -2930,15 +2989,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
                     "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -11
                     "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt1/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
-                    #if [[ -e "$dir"/$deviceid/0.0/activation_records/activation_record.plist ]]; then
-                        # [*] Alert
-                        # [*] If you boot now, you will get stuck at the \"screen time\" step in Setup.app
-                        # [*] You must delete Setup.app if you want to be able to use iOS/iPadOS $1
-                        # [*] See https://files.catbox.moe/96vhbl.mov for a video demonstration of the issue
-                        # [*] You will only see this message if activation_records are present for your device
-                        # Would you like to delete Setup.app? [y/n]:
-                    #    "$bin"/setuphelper.sh $version
-                    #fi
+                    "$bin"/setuphelper.sh $version
                 fi
             elif [[ "$version" == "12."* ]]; then
                 if [[ "$appleinternal" == 1 ]]; then
@@ -2985,15 +3036,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
                 "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -12
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt1/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
-                #if [[ -e "$dir"/$deviceid/0.0/activation_records/activation_record.plist ]]; then
-                    # [*] Alert
-                    # [*] If you boot now, you will get stuck at the \"screen time\" step in Setup.app
-                    # [*] You must delete Setup.app if you want to be able to use iOS/iPadOS $1
-                    # [*] See https://files.catbox.moe/96vhbl.mov for a video demonstration of the issue
-                    # [*] You will only see this message if activation_records are present for your device
-                    # Would you like to delete Setup.app? [y/n]:
-                    #"$bin"/setuphelper.sh $version
-                #fi
+                "$bin"/setuphelper.sh $version
             elif [[ "$version" == "13."* ]]; then
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt1/System/Library/DataClassMigrators/SystemAppMigrator.migrator/"
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv -v /mnt2/staged_system_apps/* /mnt1/Applications"

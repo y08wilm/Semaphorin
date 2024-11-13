@@ -80,15 +80,19 @@ do
     "$bin"/irecovery -q | grep NONC
     cpid=$("$bin"/irecovery -q | grep CPID | sed 's/CPID: //')
     if [[ "$cpid" == "0x8010" ]]; then
-        "$bin"/timeout 12 "$bin"/openra1n-a10 "$bin"/Pongo.bin
+        "$bin"/timeout 12 "$bin"/openra1n/0x8010 "$bin"/Pongo.bin
         sleep 5
-        "$bin"/timeout 4 "$bin"/openra1n-a10 "$bin"/Pongo.bin boot
+        "$bin"/timeout 4 "$bin"/openra1n/0x8010 "$bin"/Pongo.bin boot
+    elif [[ "$cpid" == "0x8015" ]]; then
+        "$bin"/timeout 12 "$bin"/openra1n/0x8015 "$bin"/Pongo.bin
+        sleep 5
+        "$bin"/timeout 4 "$bin"/openra1n/0x8015 "$bin"/Pongo.bin boot
     elif [[ "$cpid" == "0x8003" ]]; then
-        "$bin"/timeout 12 "$bin"/openra1n-a9 "$bin"/Pongo.bin
-        "$bin"/timeout 4 "$bin"/openra1n-a9 "$bin"/Pongo.bin boot
-    elif [[ "$cpid" == "0x8001" ]]; then
-        "$bin"/timeout 12 "$bin"/openra1n-a9x "$bin"/Pongo.bin
-        "$bin"/timeout 4 "$bin"/openra1n-a9x "$bin"/Pongo.bin boot
+        "$bin"/timeout 12 "$bin"/openra1n/0x8003 "$bin"/Pongo.bin
+        "$bin"/timeout 4 "$bin"/openra1n/0x8003 "$bin"/Pongo.bin boot
+    elif [[ "$cpid" == "0x8000" ]]; then
+        "$bin"/timeout 12 "$bin"/openra1n/0x8000 "$bin"/Pongo.bin
+        "$bin"/timeout 4 "$bin"/openra1n/0x8000 "$bin"/Pongo.bin boot
     fi
     if [[ ! "$?" == "0" ]]; then
         #echo "Exploit failed, please reconnect device in dfu mode to continue"
