@@ -2066,9 +2066,9 @@ _boot() {
         elif [[ "$3" == "8."* ]]; then
             echo "xargs $boot_args rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e PE_i_can_has_debugger=1" | "$bin"/pongoterm
         elif [[ "$3" == "9."* ]]; then
-            echo "xargs rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e PE_i_can_has_debugger=1 amfi_get_out_of_my_way=1 amfi_allow_any_signature=1" | "$bin"/pongoterm
+            echo "xargs $boot_args rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e PE_i_can_has_debugger=1 amfi_get_out_of_my_way=1 amfi_allow_any_signature=1" | "$bin"/pongoterm
         else
-            echo "xargs rd=disk0s1s1 amfi=0xff cs_enforcement_disable=1 keepsyms=1 debug=0x2014e PE_i_can_has_debugger=1 amfi_get_out_of_my_way=1 amfi_allow_any_signature=1" | "$bin"/pongoterm
+            echo "xargs $boot_args" | "$bin"/pongoterm
         fi
         echo "xfb" | "$bin"/pongoterm
         bash -c "nohup sh -c 'echo "bootux" | "$bin"/pongoterm &' > /dev/null &"
