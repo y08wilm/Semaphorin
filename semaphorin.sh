@@ -597,6 +597,10 @@ _download_ramdisk_boot_files() {
                 sudo "$bin"/gnutar -xvf "$sshtars"/ssh.tar -C /tmp/ramdisk
                 #gzip -d "$sshtars"/ploosh.tar.gz
                 #sudo "$bin"/gnutar -xvf "$sshtars"/ploosh.tar -C /tmp/ramdisk
+                if [[ "$3" == "10."* ]]; then
+                    gzip -d "$sshtars"/apfs.fs.tar.gz
+                    sudo "$bin"/gnutar -xvf "$sshtars"/apfs.fs.tar -C /tmp/ramdisk
+                fi
                 if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* || "$3" == "10."* || "$3" == "11."* ]]; then
                     # fix scp
                     sudo "$bin"/gnutar -xvf "$bin"/libcharset.1.dylib_libiconv.2.dylib.tar -C /tmp/ramdisk/usr/lib
@@ -630,7 +634,13 @@ _download_ramdisk_boot_files() {
                 else
                     "$bin"/Kernel64Patcher2 "$dir"/$1/$cpid/ramdisk/$3/kcache.raw "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -a
                 fi
-                "$bin"/kerneldiff "$dir"/$1/$cpid/ramdisk/$3/kcache.raw "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched "$dir"/$1/$cpid/ramdisk/$3/kc.bpatch
+                if [[ "$3" == "10."* ]]; then
+                    "$bin"/Kernel64Patcher "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched "$dir"/$1/$cpid/ramdisk/$3/kcache3.patched -mo
+                    #cp "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched "$dir"/$1/$cpid/ramdisk/$3/kcache3.patched
+                else
+                    cp "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched "$dir"/$1/$cpid/ramdisk/$3/kcache3.patched
+                fi
+                "$bin"/kerneldiff "$dir"/$1/$cpid/ramdisk/$3/kcache.raw "$dir"/$1/$cpid/ramdisk/$3/kcache3.patched "$dir"/$1/$cpid/ramdisk/$3/kc.bpatch
                 if [[ "$?" == "0" ]]; then
                     "$bin"/img4 -i "$dir"/$1/$cpid/ramdisk/$3/kernelcache.dec -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.img4 -M IM4M -T rkrn -P "$dir"/$1/$cpid/ramdisk/$3/kc.bpatch
                     "$bin"/img4 -i "$dir"/$1/$cpid/ramdisk/$3/kernelcache.dec -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache -M IM4M -T krnl -P "$dir"/$1/$cpid/ramdisk/$3/kc.bpatch
@@ -713,6 +723,10 @@ _download_ramdisk_boot_files() {
                 "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$sshtars"/ssh.tar
                 #gzip -d "$sshtars"/ploosh.tar.gz
                 #"$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$sshtars"/ploosh.tar
+                if [[ "$3" == "10."* ]]; then
+                    gzip -d "$sshtars"/apfs.fs.tar.gz
+                    "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$sshtars"/apfs.fs.tar
+                fi
                 if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* || "$3" == "10."* || "$3" == "11."* ]]; then
                     # fix scp
                     "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$bin"/libcharset.1.dylib_libiconv.2.dylib.tar
@@ -739,7 +753,13 @@ _download_ramdisk_boot_files() {
                 else
                     "$bin"/Kernel64Patcher2 "$dir"/$1/$cpid/ramdisk/$3/kcache.raw "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -a
                 fi
-                "$bin"/kerneldiff "$dir"/$1/$cpid/ramdisk/$3/kcache.raw "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched "$dir"/$1/$cpid/ramdisk/$3/kc.bpatch
+                if [[ "$3" == "10."* ]]; then
+                    "$bin"/Kernel64Patcher "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched "$dir"/$1/$cpid/ramdisk/$3/kcache3.patched -mo
+                    #cp "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched "$dir"/$1/$cpid/ramdisk/$3/kcache3.patched
+                else
+                    cp "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched "$dir"/$1/$cpid/ramdisk/$3/kcache3.patched
+                fi
+                "$bin"/kerneldiff "$dir"/$1/$cpid/ramdisk/$3/kcache.raw "$dir"/$1/$cpid/ramdisk/$3/kcache3.patched "$dir"/$1/$cpid/ramdisk/$3/kc.bpatch
                 if [[ "$?" == "0" ]]; then
                     "$bin"/img4 -i "$dir"/$1/$cpid/ramdisk/$3/kernelcache.dec -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache.img4 -M IM4M -T rkrn -P "$dir"/$1/$cpid/ramdisk/$3/kc.bpatch
                     "$bin"/img4 -i "$dir"/$1/$cpid/ramdisk/$3/kernelcache.dec -o "$dir"/$1/$cpid/ramdisk/$3/kernelcache -M IM4M -T krnl -P "$dir"/$1/$cpid/ramdisk/$3/kc.bpatch
@@ -1680,39 +1700,8 @@ _download_root_fs() {
         current_size=$(stat -f %z work/rdsk.dmg)
         hdiutil resize -size "$((current_size + 10000000))" work/rdsk.dmg # 10MB more
         hdiutil attach -mountpoint rdmount work/rdsk.dmg
-        if [[ "$3" == "7"* ]]; then
-            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -7
-        elif [[ "$3" == "8"* ]]; then
-            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -8
-        elif [[ "$3" == "9"* ]]; then
-            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -9
-        elif [[ "$3" == "10.0"* || "$3" == "10.1"* || "$3" == "10.2"* ]]; then
-            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -10
-        elif [[ "$3" == "10."* ]]; then
-            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -103
-        elif [[ "$3" == "11.0"* || "$3" == "11.1"* || "$3" == "11.2"* ]]; then
-            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -11
-        elif [[ "$3" == "11."* ]]; then
-            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -113
-        elif [[ "$3" == "12.0"* || "$3" == "12.1"* ]]; then
-            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -12
-        elif [[ "$3" == "12."* ]]; then
-            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -122
-        elif [[ "$3" == "13.0"* || "$3" == "13.1"* || "$3" == "13.2"* || "$3" == "13.3"* ]]; then
-            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -13
-        elif [[ "$3" == "13."* ]]; then
-            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -134
-        elif [[ "$3" == "14."* ]]; then
-            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -14
-        else
-            cp ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched
-        fi
-        "$bin"/ldid -e ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag > ./work/MobileKeyBag.xml
-        "$bin"/ldid -S./work/MobileKeyBag.xml ./work/MobileKeyBag.patched 2> /dev/null
-        cp -av ./work/MobileKeyBag.patched ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag
-        #"$bin"/restored_external64patcher ./rdmount/usr/local/bin/restored_external ./work/restored_external.patched -s -b
-        #"$bin"/Kernel64Patcher ./work/restored_external2.patched ./work/restored_external.patched -i
-        "$bin"/restored_external64patcher ./rdmount/usr/local/bin/restored_external ./work/restored_external.patched -s -b -f
+        "$bin"/restored_external64patcher ./rdmount/usr/local/bin/restored_external ./work/restored_external.patched -s -b
+        "$bin"/Kernel64Patcher ./work/restored_external2.patched ./work/restored_external.patched -i
         "$bin"/ldid -e ./rdmount/usr/local/bin/restored_external > ./work/restored_external.xml
         "$bin"/ldid -S./work/restored_external.xml ./work/restored_external.patched 2> /dev/null
         cp -av ./work/restored_external.patched ./rdmount/usr/local/bin/restored_external
@@ -1839,7 +1828,9 @@ _download_root_fs() {
                 "$bin"/ipatcher work/ibec.dec work/ibec.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
             fi
         else
-            if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* ]]; then
+            if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && ! "$3" == "10."* ]]; then
+                "$bin"/iBoot64Patcher work/ibec.dec work/ibec.patched -b "rd=md0 debug=0x2014e $boot_args wdt=-1 nand-enable-reformat=1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" -n
+            elif [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* ]]; then
                 "$bin"/iBoot64Patcher work/ibec.dec work/ibec.patched -b "rd=md0 debug=0x2014e $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" -n
             else
                 "$bin"/iBoot64Patcher work/ibec.dec work/ibec.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 amfi_get_out_of_my_way=1 -restore -progress" -n
@@ -1851,7 +1842,7 @@ _download_root_fs() {
         # dtre
         dtrepath="$(awk "/""${replace}""/{x=1}x&&/DeviceTree[.]/{print;exit}" BuildManifest.plist | grep '<string>' |cut -d\> -f2 |cut -d\< -f1)"
         if [[ "$3" == "10."* || "$3" == "11."* || "$3" == "12."* || "$3" == "13."* || "$3" == "14."* ]]; then
-            "$bin"/img4tool -e -o work/dtree.raw "$dir"/$1/$cpid/$3/DeviceTree.dec
+            "$bin"/img4 -i "$dir"/$1/$cpid/$3/DeviceTree.dec -o work/dtree.raw 
         else
             cp "$dir"/$1/$cpid/$3/DeviceTree.dec work/dtree.raw
         fi
@@ -1993,7 +1984,7 @@ _kill_if_running() {
     fi
 }
 _boot() {
-    if [[ "$cpid" == "0x8003" || "$cpid" == "0x8000" || "$cpid" == "0x8010" || "$cpid" == "0x8015" ]]; then
+    if [[ "$cpid" == "0x8003" || "$cpid" == "0x8000" || "$cpid" == "0x8010" || "$cpid" == "0x8011" || "$cpid" == "0x8015" ]]; then
         cd "$dir/"
         pwd
         "$bin"/boot.sh
@@ -2104,7 +2095,7 @@ _boot_ramdisk() {
     fi
     if [[ "$pongo" == 1 ]]; then
         if [[ "$3" == "16."* || "$3" == "17."* ]]; then
-            if [[ "$cpid" == "0x8003" || "$cpid" == "0x8000" || "$cpid" == "0x8010" || "$cpid" == "0x8015" ]]; then
+            if [[ "$cpid" == "0x8003" || "$cpid" == "0x8000" || "$cpid" == "0x8010" || "$cpid" == "0x8011" || "$cpid" == "0x8015" ]]; then
                 _download_ramdisk_boot_files $deviceid $replace $3
                 cd "$dir"/$deviceid/$cpid/ramdisk/$3
                 cd "$dir"/
@@ -2460,6 +2451,24 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         _wait_for_dfu
         _dfuhelper
         sudo killall -STOP -c usbd
+        if [[ "$cpid" == "0x8011" && ! "$3" == "10."* ]]; then
+            _download_ramdisk_boot_files $deviceid $replace 10.3.3
+            cd "$dir"/$deviceid/$cpid/ramdisk/10.3.3
+            _boot_ramdisk $deviceid $replace 10.3.3
+            cd "$dir"/
+            _kill_if_running iproxy
+            sudo killall -STOP -c usbd
+            "$bin"/iproxy 2222 22 &
+            while ! [[ $("$bin"/sshpass -p "alpine" ssh -o StrictHostKeyChecking=no -p2222 root@localhost "echo hello" 2> /dev/null) == "hello" ]]; do
+                sleep 1
+            done
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/disk0s1s1 /mnt1"
+            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/disk0s1s2 /mnt2"
+            $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
+            _wait_for_dfu
+            _dfuhelper
+            sudo killall -STOP -c usbd
+        fi
         if [[ "$cpid" == "0x8015" ]]; then
             _download_ramdisk_boot_files $deviceid $replace $version
             cd "$dir"/$deviceid/$cpid/ramdisk/$version
@@ -2473,14 +2482,14 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             cd "$dir"/$deviceid/$cpid/ramdisk/10.3.3
             _boot_ramdisk $deviceid $replace 10.3.3
         elif [[ "$version" == "11."* ||  "$version" == "12."* || "$version" == "13."* || "$version" == "14."* ]]; then
-            if [[ "$(./java/bin/java -jar ./Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e 14.3 $deviceid)" == "true" ]]; then
-                _download_ramdisk_boot_files $deviceid $replace 14.3
-                cd "$dir"/$deviceid/$cpid/ramdisk/14.3
-                _boot_ramdisk $deviceid $replace 14.3
+            if [[ "$(./java/bin/java -jar ./Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e 15.6 $deviceid)" == "true" ]]; then
+                _download_ramdisk_boot_files $deviceid $replace 15.6
+                cd "$dir"/$deviceid/$cpid/ramdisk/15.6
+                _boot_ramdisk $deviceid $replace 15.6
             elif [[ "$deviceid" == "iPad"* && ! "$deviceid" == "iPad4"* ]]; then
-                _download_ramdisk_boot_files $deviceid $replace 14.3
-                cd "$dir"/$deviceid/$cpid/ramdisk/14.3
-                _boot_ramdisk $deviceid $replace 14.3
+                _download_ramdisk_boot_files $deviceid $replace 15.6
+                cd "$dir"/$deviceid/$cpid/ramdisk/15.6
+                _boot_ramdisk $deviceid $replace 15.6
             else
                 _download_ramdisk_boot_files $deviceid $replace 12.5.4
                 cd "$dir"/$deviceid/$cpid/ramdisk/12.5.4
@@ -2519,10 +2528,6 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/apticket.der root@localhost:/mnt1/System/Library/Caches/ 2> /dev/null
             "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/sep-firmware.img4 root@localhost:/mnt1/usr/standalone/firmware/ 2> /dev/null
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/sep-firmware.img4"
-            if [ -e "$dir"/$deviceid/0.0/FUD ]; then
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir /mnt1/usr/standalone/firmware/FUD"
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 "$dir"/$deviceid/0.0/FUD/* root@localhost:/mnt1/usr/standalone/firmware/FUD
-            fi
             if [ -e "$dir"/$deviceid/0.0/IC-Info.sisv ]; then
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt2/mobile/Library/FairPlay/iTunes_Control/iTunes/"
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/IC-Info.sisv root@localhost:/mnt2/mobile/Library/FairPlay/iTunes_Control/iTunes/IC-Info.sisv 2> /dev/null
@@ -2588,18 +2593,6 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/System/Library/DataClassMigrators/Calendar.migrator/' 2> /dev/null
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/System/Library/DataClassMigrators/MobileSafari.migrator/' 2> /dev/null
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/System/Library/DataClassMigrators/WebBookmarks.migrator/' 2> /dev/null
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/aopfw.img4 root@localhost:/mnt1/usr/standalone/firmware/FUD/AOP.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/homerfw.img4 root@localhost:/mnt1/usr/standalone/firmware/FUD/Homer.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/avefw.img4 root@localhost:/mnt1/usr/standalone/firmware/FUD/AVE.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/trustcache root@localhost:/mnt1/usr/standalone/firmware/FUD/StaticTrustCache.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/multitouch.img4 root@localhost:/mnt1/usr/standalone/firmware/FUD/Multitouch.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/audiocodecfirmware.img4 root@localhost:/mnt1/usr/standalone/firmware/FUD/AudioCodecFirmware.img4
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/AOP.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/Homer.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/AVE.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/StaticTrustCache.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/Multitouch.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/AudioCodecFirmware.img4"
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
                 "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -10
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt1/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
@@ -2767,7 +2760,6 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt2/root/Library/Lockdown/data_ark.plist"
                 fi
             fi
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags -R schg /mnt1/usr/standalone/firmware/FUD"
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt1/usr/lib/libmis.dylib" 2> /dev/null
             if [[ "$version" == "9."* ]]; then
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/sbin/nvram -c" 2> /dev/null
@@ -2799,7 +2791,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             if [[ "$version" == "14."* ]]; then
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/disk0s1s6 /mnt1/private/preboot"
             fi
-            if [[ "$version" == "13."* || "$version" == "14."* ]]; then
+            if [[ "$version" == "13."* ]]; then
                 has_active=$(remote_cmd "ls /mnt6/active" 2> /dev/null)
                 if [ ! "$has_active" = "/mnt6/active" ]; then
                     error "Active file does not exist! Please use SSH to create it"
@@ -2813,26 +2805,6 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 active=$(remote_cmd "cat /mnt6/active" 2> /dev/null)
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "cp -na /mnt6/* /mnt1/private/preboot"
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags -R noschg /mnt1/private/preboot/*"
-                if [[ ! "$version" == "14."* ]]; then
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/aopfw.img4 root@localhost:/mnt1/private/preboot/$active/usr/standalone/firmware/FUD/AOP.img4
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/private/preboot/$active/usr/standalone/firmware/FUD/AOP.img4"
-                else
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt1/private/preboot/$active/usr/standalone/firmware/FUD/AOP.img4"
-                fi
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/homerfw.img4 root@localhost:/mnt1/private/preboot/$active/usr/standalone/firmware/FUD/Homer.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/trustcache root@localhost:/mnt1/private/preboot/$active/usr/standalone/firmware/FUD/StaticTrustCache.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/multitouch.img4 root@localhost:/mnt1/private/preboot/$active/usr/standalone/firmware/FUD/Multitouch.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/audiocodecfirmware.img4 root@localhost:/mnt1/private/preboot/$active/usr/standalone/firmware/FUD/AudioCodecFirmware.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/ispfw.img4 root@localhost:/mnt1/private/preboot/$active/usr/standalone/firmware/FUD/ISP.img4
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/private/preboot/$active/usr/standalone/firmware/FUD/ISP.img4"
-                # ios 15
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt1/private/preboot/$active/usr/standalone/firmware/FUD/AVE.img4"
-                # stop ios from deleting our files
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/private/preboot/$active/usr/standalone/firmware/FUD/ISP.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/private/preboot/$active/usr/standalone/firmware/FUD/Homer.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/private/preboot/$active/usr/standalone/firmware/FUD/StaticTrustCache.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/private/preboot/$active/usr/standalone/firmware/FUD/Multitouch.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/private/preboot/$active/usr/standalone/firmware/FUD/AudioCodecFirmware.img4"
             fi
             if [ -e "$dir"/$deviceid/0.0/Baseband ]; then
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 "$dir"/$deviceid/0.0/Baseband root@localhost:/mnt1/usr/local/standalone/firmware
@@ -2841,10 +2813,6 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/apticket.der root@localhost:/mnt1/System/Library/Caches/
             "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/sep-firmware.img4 root@localhost:/mnt1/usr/standalone/firmware/
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/sep-firmware.img4"
-            if [ -e "$dir"/$deviceid/0.0/FUD ]; then
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt1/usr/standalone/firmware/FUD"
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -r -P 2222 "$dir"/$deviceid/0.0/FUD/* root@localhost:/mnt1/usr/standalone/firmware/FUD
-            fi
             if [ -e "$dir"/$deviceid/0.0/IC-Info.sisv ]; then
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mkdir -p /mnt2/mobile/Library/FairPlay/iTunes_Control/iTunes/"
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/0.0/IC-Info.sisv root@localhost:/mnt2/mobile/Library/FairPlay/iTunes_Control/iTunes/IC-Info.sisv 2> /dev/null
@@ -2863,28 +2831,6 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             fi
             "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/kernelcache root@localhost:/mnt1/System/Library/Caches/com.apple.kernelcaches
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt1/usr/lib/libmis.dylib"
-            if [[ ! "$version" == "14."* ]]; then
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/aopfw.img4 root@localhost:/mnt1/usr/standalone/firmware/FUD/AOP.img4
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/AOP.img4"
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/homerfw.img4 root@localhost:/mnt1/usr/standalone/firmware/FUD/Homer.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/trustcache root@localhost:/mnt1/usr/standalone/firmware/FUD/StaticTrustCache.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/multitouch.img4 root@localhost:/mnt1/usr/standalone/firmware/FUD/Multitouch.img4
-                "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/audiocodecfirmware.img4 root@localhost:/mnt1/usr/standalone/firmware/FUD/AudioCodecFirmware.img4
-                if [[ "$version" == "13."* ]]; then
-                    "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/ispfw.img4 root@localhost:/mnt1/usr/standalone/firmware/FUD/ISP.img4
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/ISP.img4"
-                else
-                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt1/usr/standalone/firmware/FUD/ISP.img4"
-                fi
-                # ios 15
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt1/usr/standalone/firmware/FUD/AVE.img4"
-                # stop ios from deleting our files
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/ISP.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/Homer.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/StaticTrustCache.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/Multitouch.img4"
-                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/usr/bin/chflags schg /mnt1/usr/standalone/firmware/FUD/AudioCodecFirmware.img4"
-            fi
             # fix stuck on apple logo after long progress bar
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt1/System/Library/DataClassMigrators/CoreLocationMigrator.migrator/"
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt1/System/Library/DataClassMigrators/PassbookDataMigrator.migrator/"
@@ -2933,7 +2879,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.Collection.plist root@localhost:/mnt2/mobile/Library/Preferences/com.apple.Accessibility.Collection.plist
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/com.apple.Accessibility.plist root@localhost:/mnt2/mobile/Library/Preferences/com.apple.Accessibility.plist
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
-                "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -10
+                "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -103
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt1/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
                 #"$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'cp /mnt1/usr/libexec/keybagd /mnt1/usr/libexec/keybagd.bak' 2> /dev/null
                 #"$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/jb/fixkeybag root@localhost:/mnt1/usr/libexec/keybagd 2> /dev/null
@@ -3098,14 +3044,14 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     cd "$dir"/$deviceid/$cpid/ramdisk/10.3.3
                     _boot_ramdisk $deviceid $replace 10.3.3
                 elif [[ "$version" == "11."* ||  "$version" == "12."* || "$version" == "13."* || "$version" == "14."* ]]; then
-                    if [[ "$(./java/bin/java -jar ./Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e 14.3 $deviceid)" == "true" ]]; then
-                        _download_ramdisk_boot_files $deviceid $replace 14.3
-                        cd "$dir"/$deviceid/$cpid/ramdisk/14.3
-                        _boot_ramdisk $deviceid $replace 14.3
+                    if [[ "$(./java/bin/java -jar ./Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e 15.6 $deviceid)" == "true" ]]; then
+                        _download_ramdisk_boot_files $deviceid $replace 15.6
+                        cd "$dir"/$deviceid/$cpid/ramdisk/15.6
+                        _boot_ramdisk $deviceid $replace 15.6
                     elif [[ "$deviceid" == "iPad"* && ! "$deviceid" == "iPad4"* ]]; then
-                        _download_ramdisk_boot_files $deviceid $replace 14.3
-                        cd "$dir"/$deviceid/$cpid/ramdisk/14.3
-                        _boot_ramdisk $deviceid $replace 14.3
+                        _download_ramdisk_boot_files $deviceid $replace 15.6
+                        cd "$dir"/$deviceid/$cpid/ramdisk/15.6
+                        _boot_ramdisk $deviceid $replace 15.6
                     else
                         _download_ramdisk_boot_files $deviceid $replace 12.5.4
                         cd "$dir"/$deviceid/$cpid/ramdisk/12.5.4

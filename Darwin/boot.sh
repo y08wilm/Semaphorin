@@ -83,6 +83,10 @@ do
         "$bin"/timeout 12 "$bin"/openra1n/0x8010 "$bin"/Pongo.bin
         sleep 5
         "$bin"/timeout 4 "$bin"/openra1n/0x8010 "$bin"/Pongo.bin boot
+    elif [[ "$cpid" == "0x8011" ]]; then
+        "$bin"/timeout 12 "$bin"/openra1n/openra1n "$bin"/Pongo.bin
+        sleep 5
+        "$bin"/timeout 4 "$bin"/openra1n/openra1n "$bin"/Pongo.bin boot
     elif [[ "$cpid" == "0x8015" ]]; then
         "$bin"/timeout 12 "$bin"/openra1n/0x8015 "$bin"/Pongo.bin
         sleep 5
