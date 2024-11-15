@@ -597,10 +597,10 @@ _download_ramdisk_boot_files() {
                 sudo "$bin"/gnutar -xvf "$sshtars"/ssh.tar -C /tmp/ramdisk
                 #gzip -d "$sshtars"/ploosh.tar.gz
                 #sudo "$bin"/gnutar -xvf "$sshtars"/ploosh.tar -C /tmp/ramdisk
-                if [[ "$3" == "10."* ]]; then
-                    gzip -d "$sshtars"/apfs.fs.tar.gz
-                    sudo "$bin"/gnutar -xvf "$sshtars"/apfs.fs.tar -C /tmp/ramdisk
-                fi
+                #if [[ "$3" == "10."* ]]; then
+                #    gzip -d "$sshtars"/apfs.fs.tar.gz
+                #    sudo "$bin"/gnutar -xvf "$sshtars"/apfs.fs.tar -C /tmp/ramdisk
+                #fi
                 if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* || "$3" == "10."* || "$3" == "11."* ]]; then
                     # fix scp
                     sudo "$bin"/gnutar -xvf "$bin"/libcharset.1.dylib_libiconv.2.dylib.tar -C /tmp/ramdisk/usr/lib
@@ -723,10 +723,10 @@ _download_ramdisk_boot_files() {
                 "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$sshtars"/ssh.tar
                 #gzip -d "$sshtars"/ploosh.tar.gz
                 #"$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$sshtars"/ploosh.tar
-                if [[ "$3" == "10."* ]]; then
-                    gzip -d "$sshtars"/apfs.fs.tar.gz
-                    "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$sshtars"/apfs.fs.tar
-                fi
+                #if [[ "$3" == "10."* ]]; then
+                #    gzip -d "$sshtars"/apfs.fs.tar.gz
+                #    "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$sshtars"/apfs.fs.tar
+                #fi
                 if [[ "$3" == "7."* || "$3" == "8."* || "$3" == "9."* || "$3" == "10."* || "$3" == "11."* ]]; then
                     # fix scp
                     "$bin"/hfsplus "$dir"/$1/$cpid/ramdisk/$3/RestoreRamDisk.dmg untar "$bin"/libcharset.1.dylib_libiconv.2.dylib.tar
@@ -1892,7 +1892,7 @@ _download_root_fs() {
                 "$bin"/ipatcher work/ibec.dec work/ibec.patched -b "amfi=0xff cs_enforcement_disable=1 $boot_args rd=md0 nand-enable-reformat=1 -progress"
             fi
         else
-            if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && ! "$3" == "10."* ]]; then
+            if [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* && ! "$3" == "10."* && ! "$3" == "9."* ]]; then
                 "$bin"/iBoot64Patcher work/ibec.dec work/ibec.patched -b "rd=md0 debug=0x2014e $boot_args wdt=-1 nand-enable-reformat=1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" -n
             elif [[ ! "$deviceid" == "iPhone6"* && ! "$deviceid" == "iPhone7"* && ! "$deviceid" == "iPad4"* && ! "$deviceid" == "iPad5"* && ! "$deviceid" == "iPod7"* ]]; then
                 "$bin"/iBoot64Patcher work/ibec.dec work/ibec.patched -b "rd=md0 debug=0x2014e $boot_args wdt=-1 `if [ "$check" = '0x8960' ] || [ "$check" = '0x7000' ] || [ "$check" = '0x7001' ]; then echo "-restore"; fi`" -n
@@ -2522,24 +2522,6 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         _wait_for_dfu
         _dfuhelper
         sudo killall -STOP -c usbd
-        if [[ "$cpid" == "0x8011" && ! "$3" == "10."* ]]; then
-            _download_ramdisk_boot_files $deviceid $replace 10.3.3
-            cd "$dir"/$deviceid/$cpid/ramdisk/10.3.3
-            _boot_ramdisk $deviceid $replace 10.3.3
-            cd "$dir"/
-            _kill_if_running iproxy
-            sudo killall -STOP -c usbd
-            "$bin"/iproxy 2222 22 &
-            while ! [[ $("$bin"/sshpass -p "alpine" ssh -o StrictHostKeyChecking=no -p2222 root@localhost "echo hello" 2> /dev/null) == "hello" ]]; do
-                sleep 1
-            done
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/disk0s1s1 /mnt1"
-            "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/mount_apfs /dev/disk0s1s2 /mnt2"
-            $("$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "/sbin/reboot &" 2> /dev/null &)
-            _wait_for_dfu
-            _dfuhelper
-            sudo killall -STOP -c usbd
-        fi
         if [[ "$cpid" == "0x8015" ]]; then
             _download_ramdisk_boot_files $deviceid $replace $version
             cd "$dir"/$deviceid/$cpid/ramdisk/$version
@@ -2579,7 +2561,8 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         _kill_if_running iproxy
         sudo killall -STOP -c usbd
         "$bin"/iproxy 2222 22 &
-        while ! [[ $("$bin"/sshpass -p "alpine" ssh -o StrictHostKeyChecking=no -p2222 root@localhost "echo hello" 2> /dev/null) == "hello" ]]; do
+        while ! [[ $("$bin"/sshpass -p "alpine" ssh -o StrictHostKeyChecking=no -p2222 root@localhost "ls /dev | grep rdisk0s1s1" 2> /dev/null) == "rdisk0s1s1" ]]; do
+            # Wait for NAND status to be Ready
             sleep 1
         done
         if [[ "$version" == "7."* || "$version" == "8."* || "$version" == "9."* || "$version" == "10.0"* || "$version" == "10.1"* || "$version" == "10.2"*  ]]; then
@@ -3162,7 +3145,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 _kill_if_running iproxy
                 sudo killall -STOP -c usbd
                 "$bin"/iproxy 2222 22 &
-                while ! [[ $("$bin"/sshpass -p "alpine" ssh -o StrictHostKeyChecking=no -p2222 root@localhost "echo hello" 2> /dev/null) == "hello" ]]; do
+                while ! [[ $("$bin"/sshpass -p "alpine" ssh -o StrictHostKeyChecking=no -p2222 root@localhost "ls /dev | grep rdisk0s1s1" 2> /dev/null) == "rdisk0s1s1" ]]; do
                     sleep 1
                 done
                 if [[ "$version" == "9.3"* || "$version" == "10.0"* || "$version" == "10.1"* || "$version" == "10.2"* ]]; then
@@ -3245,7 +3228,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
         _kill_if_running iproxy
         sudo killall -STOP -c usbd
         "$bin"/iproxy 2222 22 &
-        while ! [[ $("$bin"/sshpass -p "alpine" ssh -o StrictHostKeyChecking=no -p2222 root@localhost "echo hello" 2> /dev/null) == "hello" ]]; do
+        while ! [[ $("$bin"/sshpass -p "alpine" ssh -o StrictHostKeyChecking=no -p2222 root@localhost "ls /dev | grep rdisk0s1s1" 2> /dev/null) == "rdisk0s1s1" ]]; do
             sleep 1
         done
         if [[ "$restore_activation" == 1 ]]; then
