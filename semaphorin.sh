@@ -635,7 +635,7 @@ _download_ramdisk_boot_files() {
                     "$bin"/Kernel64Patcher2 "$dir"/$1/$cpid/ramdisk/$3/kcache.raw "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -a
                 fi
                 if [[ "$3" == "10."* ]]; then
-                    "$bin"/Kernel64Patcher "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched "$dir"/$1/$cpid/ramdisk/$3/kcache3.patched -mo
+                    "$bin"/Kernel64Patcher "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched "$dir"/$1/$cpid/ramdisk/$3/kcache3.patched $cpid -mo
                     #cp "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched "$dir"/$1/$cpid/ramdisk/$3/kcache3.patched
                 else
                     cp "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched "$dir"/$1/$cpid/ramdisk/$3/kcache3.patched
@@ -754,7 +754,7 @@ _download_ramdisk_boot_files() {
                     "$bin"/Kernel64Patcher2 "$dir"/$1/$cpid/ramdisk/$3/kcache.raw "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched -a
                 fi
                 if [[ "$3" == "10."* ]]; then
-                    "$bin"/Kernel64Patcher "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched "$dir"/$1/$cpid/ramdisk/$3/kcache3.patched -mo
+                    "$bin"/Kernel64Patcher "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched "$dir"/$1/$cpid/ramdisk/$3/kcache3.patched $cpid -mo
                     #cp "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched "$dir"/$1/$cpid/ramdisk/$3/kcache3.patched
                 else
                     cp "$dir"/$1/$cpid/ramdisk/$3/kcache2.patched "$dir"/$1/$cpid/ramdisk/$3/kcache3.patched
@@ -1137,7 +1137,7 @@ _download_boot_files() {
         if [[ "$3" == "8."* ]]; then
             "$bin"/img4 -i "$dir"/$1/$cpid/$3/iBSS.patched -o "$dir"/$1/$cpid/$3/iBSS.img4 -M IM4M -A -T ibss
             "$bin"/img4 -i "$dir"/$1/$cpid/$3/iBEC.patched -o "$dir"/$1/$cpid/$3/iBEC.img4 -M IM4M -A -T ibec
-            "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache.patched -u 8 -t -p -e 8 -f 8 -a -m 8 -g -s -d
+            "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache.patched $cpid -u 8 -t -p -e 8 -f 8 -a -m 8 -g -s -d
             "$bin"/kerneldiff "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kc.bpatch
             "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o "$dir"/$1/$cpid/$3/kernelcache.img4 -M IM4M -T rkrn -P "$dir"/$1/$cpid/$3/kc.bpatch
             "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o "$dir"/$1/$cpid/$3/kernelcache -M IM4M -T krnl -P "$dir"/$1/$cpid/$3/kc.bpatch
@@ -1146,7 +1146,7 @@ _download_boot_files() {
         elif [[ "$3" == "9."* ]]; then
             "$bin"/img4 -i "$dir"/$1/$cpid/$3/iBSS.patched -o "$dir"/$1/$cpid/$3/iBSS.img4 -M IM4M -A -T ibss
             "$bin"/img4 -i "$dir"/$1/$cpid/$3/iBEC.patched -o "$dir"/$1/$cpid/$3/iBEC.img4 -M IM4M -A -T ibec
-            "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache.patched -u 9 -f 9 -k
+            "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache.patched $cpid -u 9 -f 9 -k
             "$bin"/kerneldiff "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kc.bpatch
             "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o "$dir"/$1/$cpid/$3/kernelcache.img4 -M IM4M -T rkrn -P "$dir"/$1/$cpid/$3/kc.bpatch
             "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o "$dir"/$1/$cpid/$3/kernelcache -M IM4M -T krnl -P "$dir"/$1/$cpid/$3/kc.bpatch
@@ -1155,7 +1155,7 @@ _download_boot_files() {
         elif [[ "$3" == "7."* ]]; then
             "$bin"/img4 -i "$dir"/$1/$cpid/$3/iBSS.patched -o "$dir"/$1/$cpid/$3/iBSS.img4 -M IM4M -A -T ibss
             "$bin"/img4 -i "$dir"/$1/$cpid/$3/iBEC.patched -o "$dir"/$1/$cpid/$3/iBEC.img4 -M IM4M -A -T ibec
-            "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache.patched -u 7 -m 7 -e 7 -f 7 -k
+            "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache.patched $cpid -u 7 -m 7 -e 7 -f 7 -k
             "$bin"/kerneldiff "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kc.bpatch
             "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o "$dir"/$1/$cpid/$3/kernelcache.img4 -M IM4M -T rkrn -P "$dir"/$1/$cpid/$3/kc.bpatch
             "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o "$dir"/$1/$cpid/$3/kernelcache -M IM4M -T krnl -P "$dir"/$1/$cpid/$3/kc.bpatch
@@ -1178,7 +1178,7 @@ _download_boot_files() {
                 "$bin"/img4 -i "$dir"/$1/$cpid/$3/audiocodecfirmware.dec -o "$dir"/$1/$cpid/$3/audiocodecfirmware.img4 -M IM4M -T acfw
             fi
             "$bin"/KPlooshFinder "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache.patched
-            "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched -u 10 -a -f 10 -q
+            "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched $cpid -u 10 -a -f 10 -q
             "$bin"/kerneldiff "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache2.patched "$dir"/$1/$cpid/$3/kc.bpatch
             "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o "$dir"/$1/$cpid/$3/kernelcache.img4 -M IM4M -T rkrn -P "$dir"/$1/$cpid/$3/kc.bpatch
             "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o "$dir"/$1/$cpid/$3/kernelcache -M IM4M -T krnl -P "$dir"/$1/$cpid/$3/kc.bpatch
@@ -1207,15 +1207,15 @@ _download_boot_files() {
             "$bin"/KPlooshFinder "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache.patched
             if [[ "$3" == "11.3"* || "$3" == "11.4"* ]]; then
                 if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                    "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched -u 11 -f 11 -r -c
+                    "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched $cpid -u 11 -f 11 -r -c
                 else
-                    "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched -u 11 -f 11 -r
+                    "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched $cpid -u 11 -f 11 -r
                 fi
             else
                 if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                    "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched -u 11 -f 11 -b -c
+                    "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched $cpid -u 11 -f 11 -b -c
                 else
-                    "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched -u 11 -f 11 -b
+                    "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched $cpid -u 11 -f 11 -b
                 fi
             fi
             "$bin"/kerneldiff "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache2.patched "$dir"/$1/$cpid/$3/kc.bpatch
@@ -1223,6 +1223,38 @@ _download_boot_files() {
             "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o "$dir"/$1/$cpid/$3/kernelcache -M IM4M -T krnl -P "$dir"/$1/$cpid/$3/kc.bpatch
             if [ -e "$dir"/$1/$cpid/$3/trustcache.im4p ]; then
                 "$bin"/img4 -i "$dir"/$1/$cpid/$3/trustcache.im4p -o "$dir"/$1/$cpid/$3/trustcache.img4 -M IM4M -T rtsc
+            fi
+            "$bin"/img4tool -e -o "$dir"/$1/$cpid/$3/devicetree.out "$dir"/$1/$cpid/$3/DeviceTree.dec
+            "$bin"/dtree_patcher "$dir"/$1/$cpid/$3/devicetree.out "$dir"/$1/$cpid/$3/DeviceTree.patched -n
+            "$bin"/img4 -i "$dir"/$1/$cpid/$3/DeviceTree.patched -o "$dir"/$1/$cpid/$3/devicetree.img4 -A -M IM4M -T rdtr
+        elif [[ "$3" == "12.0"* || "$3" == "12.1"* ]]; then
+            "$bin"/img4 -i "$dir"/$1/$cpid/$3/iBSS.patched -o "$dir"/$1/$cpid/$3/iBSS.img4 -M IM4M -A -T ibss
+            "$bin"/img4 -i "$dir"/$1/$cpid/$3/iBEC.patched -o "$dir"/$1/$cpid/$3/iBEC.img4 -M IM4M -A -T ibec
+            "$bin"/img4 -i "$dir"/$1/$cpid/$3/aopfw.dec -o "$dir"/$1/$cpid/$3/aopfw.img4 -M IM4M -T aopf
+            if [ -e "$dir"/$1/$cpid/$3/homerfw.dec ]; then
+                "$bin"/img4 -i "$dir"/$1/$cpid/$3/homerfw.dec -o "$dir"/$1/$cpid/$3/homerfw.img4 -M IM4M -T homr
+            fi
+            if [ -e "$dir"/$1/$cpid/$3/avefw.dec ]; then
+                "$bin"/img4 -i "$dir"/$1/$cpid/$3/avefw.dec -o "$dir"/$1/$cpid/$3/avefw.img4 -M IM4M -T avef
+            fi
+            if [ -e "$dir"/$1/$cpid/$3/multitouch.dec ]; then
+                "$bin"/img4 -i "$dir"/$1/$cpid/$3/multitouch.dec -o "$dir"/$1/$cpid/$3/multitouch.img4 -M IM4M -T mtfw
+            fi
+            if [ -e "$dir"/$1/$cpid/$3/audiocodecfirmware.dec ]; then
+                "$bin"/img4 -i "$dir"/$1/$cpid/$3/audiocodecfirmware.dec -o "$dir"/$1/$cpid/$3/audiocodecfirmware.img4 -M IM4M -T acfw
+            fi
+            "$bin"/KPlooshFinder "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache.patched
+            if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
+                "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched $cpid -u 12 -r -f 12 -c
+            else
+                "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched $cpid -u 12 -r -f 12
+            fi
+            "$bin"/kerneldiff "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache2.patched "$dir"/$1/$cpid/$3/kc.bpatch
+            "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o "$dir"/$1/$cpid/$3/kernelcache.img4 -M IM4M -T rkrn -P "$dir"/$1/$cpid/$3/kc.bpatch
+            "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o "$dir"/$1/$cpid/$3/kernelcache -M IM4M -T krnl -P "$dir"/$1/$cpid/$3/kc.bpatch
+            if [ -e "$dir"/$1/$cpid/$3/trustcache.im4p ]; then
+                "$bin"/img4 -i "$dir"/$1/$cpid/$3/trustcache.im4p -o "$dir"/$1/$cpid/$3/trustcache.img4 -M IM4M -T rtsc
+                "$bin"/img4 -i "$dir"/$1/$cpid/$3/trustcache.im4p -o "$dir"/$1/$cpid/$3/trustcache -M IM4M -T trst
             fi
             "$bin"/img4tool -e -o "$dir"/$1/$cpid/$3/devicetree.out "$dir"/$1/$cpid/$3/DeviceTree.dec
             "$bin"/dtree_patcher "$dir"/$1/$cpid/$3/devicetree.out "$dir"/$1/$cpid/$3/DeviceTree.patched -n
@@ -1245,9 +1277,9 @@ _download_boot_files() {
             fi
             "$bin"/KPlooshFinder "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache.patched
             if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched -u 12 -r -f 12 -c
+                "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched $cpid -u 122 -r -f 12 -c
             else
-                "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched -u 12 -r -f 12
+                "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched $cpid -u 122 -r -f 12
             fi
             "$bin"/kerneldiff "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache2.patched "$dir"/$1/$cpid/$3/kc.bpatch
             "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o "$dir"/$1/$cpid/$3/kernelcache.img4 -M IM4M -T rkrn -P "$dir"/$1/$cpid/$3/kc.bpatch
@@ -1279,8 +1311,8 @@ _download_boot_files() {
                 "$bin"/img4 -i "$dir"/$1/$cpid/$3/ispfw.dec -o "$dir"/$1/$cpid/$3/ispfw.img4 -M IM4M -T ispf
             fi
             "$bin"/KPlooshFinder "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache.patched
-            #"$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched -u 13 -r -f 13
-            "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched -z -r -f 13
+            #"$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched $cpid -u 13 -r -f 13
+            "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched $cpid -z -r -f 13
             "$bin"/kerneldiff "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache2.patched "$dir"/$1/$cpid/$3/kc.bpatch
             if [[ "$?" == "0" ]]; then
                 "$bin"/img4 -i "$dir"/$1/$cpid/$3/kernelcache.dec -o "$dir"/$1/$cpid/$3/kernelcache.img4 -M IM4M -T rkrn -P "$dir"/$1/$cpid/$3/kc.bpatch
@@ -1323,8 +1355,8 @@ _download_boot_files() {
                 "$bin"/img4 -i "$dir"/$1/$cpid/$3/ispfw.dec -o "$dir"/$1/$cpid/$3/ispfw.img4 -M IM4M -T ispf
             fi
             "$bin"/KPlooshFinder "$dir"/$1/$cpid/$3/kcache.raw "$dir"/$1/$cpid/$3/kcache.patched
-            #"$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched -u 14 -f 14
-            "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched -w -f 14
+            #"$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched $cpid -u 14 -f 14
+            "$bin"/Kernel64Patcher "$dir"/$1/$cpid/$3/kcache.patched "$dir"/$1/$cpid/$3/kcache2.patched $cpid -w -f 14
             if [[ "$deviceid" == *'iPhone8'* ]] || [[ "$deviceid" == *'iPad6'* ]] || [[ "$deviceid" == *'iPad5'* ]]; then
                 python3 -m pyimg4 im4p create -i "$dir"/$1/$cpid/$3/kcache2.patched -o "$dir"/$1/$cpid/$3/kernelcache.im4p.img4 --extra "$dir"/$1/$cpid/$3/kpp.bin -f rkrn --lzss
                 python3 -m pyimg4 im4p create -i "$dir"/$1/$cpid/$3/kcache2.patched -o "$dir"/$1/$cpid/$3/kernelcache.im4p --extra "$dir"/$1/$cpid/$3/kpp.bin -f krnl --lzss
@@ -1574,7 +1606,7 @@ _download_clean_boot_files() {
             "$bin"/KPlooshFinder2 "$dir"/$1/clean/$cpid/$3/kcache.patched "$dir"/$1/clean/$cpid/$3/kcache2.patched
         else
             "$bin"/KPlooshFinder "$dir"/$1/clean/$cpid/$3/kcache.raw "$dir"/$1/clean/$cpid/$3/kcache.patched
-            "$bin"/Kernel64Patcher "$dir"/$1/clean/$cpid/$3/kcache.patched "$dir"/$1/clean/$cpid/$3/kcache2.patched -f $(echo "$3" | cut -d '.' -f 1)
+            "$bin"/Kernel64Patcher "$dir"/$1/clean/$cpid/$3/kcache.patched "$dir"/$1/clean/$cpid/$3/kcache2.patched $cpid -f $(echo "$3" | cut -d '.' -f 1)
         fi
         "$bin"/kerneldiff "$dir"/$1/clean/$cpid/$3/kcache.raw "$dir"/$1/clean/$cpid/$3/kcache2.patched "$dir"/$1/clean/$cpid/$3/kc.bpatch
         if [[ "$?" == "0" ]]; then
@@ -1731,9 +1763,9 @@ _download_root_fs() {
         "$bin"/ldid -S./work/MobileKeyBag.xml ./work/MobileKeyBag.patched 2> /dev/null
         cp -av ./work/MobileKeyBag.patched ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag
         #"$bin"/restored_external64patcher ./rdmount/usr/local/bin/restored_external ./work/restored_external.patched -s -b
-        #"$bin"/Kernel64Patcher ./work/restored_external2.patched ./work/restored_external.patched -i
+        #"$bin"/Kernel64Patcher ./work/restored_external2.patched ./work/restored_external.patched $cpid -i
         "$bin"/restored_external64patcher ./rdmount/usr/local/bin/restored_external ./work/restored_external.patched -s -b -f
-        "$bin"/Kernel64Patcher ./work/restored_external2.patched ./work/restored_external.patched -i
+        "$bin"/Kernel64Patcher ./work/restored_external2.patched ./work/restored_external.patched $cpid -i
         "$bin"/ldid -e ./rdmount/usr/local/bin/restored_external > ./work/restored_external.xml
         "$bin"/ldid -S./work/restored_external.xml ./work/restored_external.patched 2> /dev/null
         cp -av ./work/restored_external.patched ./rdmount/usr/local/bin/restored_external
@@ -1886,44 +1918,51 @@ _download_root_fs() {
         cp "$dir"/$1/$cpid/$3/kcache.raw work/kcache.raw
         if [[ "$3" == "7."* ]]; then
             cp work/kcache.raw work/kcache1.raw
-            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 7 -f 7 -k
+            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw $cpid -u 7 -f 7 -k
         elif [[ "$3" == "8"* ]]; then
             cp work/kcache.raw work/kcache1.raw
-            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 8 -f 8 -k
+            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw $cpid -u 8 -f 8 -k
         elif [[ "$3" == "9"* ]]; then
             cp work/kcache.raw work/kcache1.raw
-            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 9 -f 9 -k
+            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw $cpid -u 9 -f 9 -k
         elif [[ "$3" == "10."* ]]; then
             "$bin"/KPlooshFinder work/kcache.raw work/kcache1.raw
-            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 10 -f 10 -q -a
+            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw $cpid -u 10 -f 10 -q -a
         elif [[ "$3" == "11"* ]]; then
             "$bin"/KPlooshFinder work/kcache.raw work/kcache1.raw
             if [[ "$3" == "11.3"* || "$3" == "11.4"* ]]; then
                 if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                    "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 11 -f 11 -r -c
+                    "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw $cpid -u 11 -f 11 -r -c
                 else
-                    "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 11 -f 11 -r
+                    "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw $cpid -u 11 -f 11 -r
                 fi
             else
                 if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                    "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 11 -f 11 -b -c
+                    "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw $cpid -u 11 -f 11 -b -c
                 else
-                    "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 11 -f 11 -b
+                    "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw $cpid -u 11 -f 11 -b
                 fi
+            fi
+        elif [[ "$3" == "12.0"* || "$3" == "12.1"* ]]; then
+            "$bin"/KPlooshFinder work/kcache.raw work/kcache1.raw
+            if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
+                "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw $cpid -u 12 -r -f 12 -c
+            else
+                "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw $cpid -u 12 -r -f 12
             fi
         elif [[ "$3" == "12"* ]]; then
             "$bin"/KPlooshFinder work/kcache.raw work/kcache1.raw
             if [[ "$deviceid" == "iPhone10"* || "$cpid" == "0x8015"* ]]; then
-                "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 12 -r -f 12 -c
+                "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw $cpid -u 122 -r -f 12 -c
             else
-                "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -u 12 -r -f 12
+                "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw $cpid -u 122 -r -f 12
             fi
         elif [[ "$3" == "13"* ]]; then
             "$bin"/KPlooshFinder work/kcache.raw work/kcache1.raw
-            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -z -r -f 13
+            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw $cpid -z -r -f 13
         elif [[ "$3" == "14"* ]]; then
             "$bin"/KPlooshFinder work/kcache.raw work/kcache1.raw
-            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw -w -f 14
+            "$bin"/Kernel64Patcher work/kcache1.raw work/kcache2.raw $cpid -w -f 14
         elif [[ "$3" == "15."* || "$3" == "16."* ]]; then
             #cp work/kcache.raw work/kcache1.raw
             #"$bin"/KPlooshFinder2 work/kcache1.raw work/kcache2.raw
@@ -2514,14 +2553,14 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             cd "$dir"/$deviceid/$cpid/ramdisk/10.3.3
             _boot_ramdisk $deviceid $replace 10.3.3
         elif [[ "$version" == "11."* ||  "$version" == "12."* || "$version" == "13."* || "$version" == "14."* ]]; then
-            if [[ "$(./java/bin/java -jar ./Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e 15.6 $deviceid)" == "true" ]]; then
-                _download_ramdisk_boot_files $deviceid $replace 15.6
-                cd "$dir"/$deviceid/$cpid/ramdisk/15.6
-                _boot_ramdisk $deviceid $replace 15.6
+            if [[ "$(./java/bin/java -jar ./Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e 14.3 $deviceid)" == "true" ]]; then
+                _download_ramdisk_boot_files $deviceid $replace 14.3
+                cd "$dir"/$deviceid/$cpid/ramdisk/14.3
+                _boot_ramdisk $deviceid $replace 14.3
             elif [[ "$deviceid" == "iPad"* && ! "$deviceid" == "iPad4"* ]]; then
-                _download_ramdisk_boot_files $deviceid $replace 15.6
-                cd "$dir"/$deviceid/$cpid/ramdisk/15.6
-                _boot_ramdisk $deviceid $replace 15.6
+                _download_ramdisk_boot_files $deviceid $replace 14.3
+                cd "$dir"/$deviceid/$cpid/ramdisk/14.3
+                _boot_ramdisk $deviceid $replace 14.3
             else
                 _download_ramdisk_boot_files $deviceid $replace 12.5.4
                 cd "$dir"/$deviceid/$cpid/ramdisk/12.5.4
@@ -2968,7 +3007,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
                     "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -11
                     "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt1/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
-                    "$dir"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/Applications/Setup.app'
+                    "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/Applications/Setup.app'
                 fi
             elif [[ "$version" == "12."* ]]; then
                 if [[ "$appleinternal" == 1 ]]; then
@@ -3015,7 +3054,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw 2> /dev/null
                 "$bin"/dsc64patcher "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.raw "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched -12
                 "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/dyld_shared_cache_arm64.patched root@localhost:/mnt1/System/Library/Caches/com.apple.dyld/dyld_shared_cache_arm64 2> /dev/null
-                "$dir"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/Applications/Setup.app'
+                "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost 'rm -rf /mnt1/Applications/Setup.app'
             elif [[ "$version" == "13."* ]]; then
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "rm -rf /mnt1/System/Library/DataClassMigrators/SystemAppMigrator.migrator/"
                 "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost "mv -v /mnt2/staged_system_apps/* /mnt1/Applications"
@@ -3077,14 +3116,14 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
                     cd "$dir"/$deviceid/$cpid/ramdisk/10.3.3
                     _boot_ramdisk $deviceid $replace 10.3.3
                 elif [[ "$version" == "11."* ||  "$version" == "12."* || "$version" == "13."* || "$version" == "14."* ]]; then
-                    if [[ "$(./java/bin/java -jar ./Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e 15.6 $deviceid)" == "true" ]]; then
-                        _download_ramdisk_boot_files $deviceid $replace 15.6
-                        cd "$dir"/$deviceid/$cpid/ramdisk/15.6
-                        _boot_ramdisk $deviceid $replace 15.6
+                    if [[ "$(./java/bin/java -jar ./Darwin/FirmwareKeysDl-1.0-SNAPSHOT.jar -e 14.3 $deviceid)" == "true" ]]; then
+                        _download_ramdisk_boot_files $deviceid $replace 14.3
+                        cd "$dir"/$deviceid/$cpid/ramdisk/14.3
+                        _boot_ramdisk $deviceid $replace 14.3
                     elif [[ "$deviceid" == "iPad"* && ! "$deviceid" == "iPad4"* ]]; then
-                        _download_ramdisk_boot_files $deviceid $replace 15.6
-                        cd "$dir"/$deviceid/$cpid/ramdisk/15.6
-                        _boot_ramdisk $deviceid $replace 15.6
+                        _download_ramdisk_boot_files $deviceid $replace 14.3
+                        cd "$dir"/$deviceid/$cpid/ramdisk/14.3
+                        _boot_ramdisk $deviceid $replace 14.3
                     else
                         _download_ramdisk_boot_files $deviceid $replace 12.5.4
                         cd "$dir"/$deviceid/$cpid/ramdisk/12.5.4
@@ -3554,7 +3593,7 @@ if [[ "$ramdisk" == 1 || "$restore" == 1 || "$dump_blobs" == 1 || "$force_activa
             info "Enabling NoMoreSIGABRT on /dev/disk0s1s2 . . ."
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/bin/dd if=/dev/disk0s1s2 of=/mnt1/out.img bs=512 count=8192'
             "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 root@localhost:/mnt1/out.img "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.img
-            "$bin"/Kernel64Patcher "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.img "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.patched -n
+            "$bin"/Kernel64Patcher "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.img "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.patched $cpid -n
             "$bin"/sshpass -p "alpine" scp -o StrictHostKeyChecking=no -P 2222 "$dir"/$deviceid/$cpid/$version/NoMoreSIGABRT.patched root@localhost:/mnt1/out.img
             "$bin"/sshpass -p 'alpine' ssh -o StrictHostKeyChecking=no -p2222 root@localhost '/bin/dd if=/mnt1/out.img of=/dev/disk0s1s2 bs=512 count=8192'
             info "Done"
