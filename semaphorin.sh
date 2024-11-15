@@ -1700,7 +1700,39 @@ _download_root_fs() {
         current_size=$(stat -f %z work/rdsk.dmg)
         hdiutil resize -size "$((current_size + 10000000))" work/rdsk.dmg # 10MB more
         hdiutil attach -mountpoint rdmount work/rdsk.dmg
-        "$bin"/restored_external64patcher ./rdmount/usr/local/bin/restored_external ./work/restored_external.patched -s -b
+        if [[ "$3" == "7"* ]]; then
+            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -7
+        elif [[ "$3" == "8"* ]]; then
+            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -8
+        elif [[ "$3" == "9"* ]]; then
+            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -9
+        elif [[ "$3" == "10.0"* || "$3" == "10.1"* || "$3" == "10.2"* ]]; then
+            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -10
+        elif [[ "$3" == "10."* ]]; then
+            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -103
+        elif [[ "$3" == "11.0"* || "$3" == "11.1"* || "$3" == "11.2"* ]]; then
+            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -11
+        elif [[ "$3" == "11."* ]]; then
+            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -113
+        elif [[ "$3" == "12.0"* || "$3" == "12.1"* ]]; then
+            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -12
+        elif [[ "$3" == "12."* ]]; then
+            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -122
+        elif [[ "$3" == "13.0"* || "$3" == "13.1"* || "$3" == "13.2"* || "$3" == "13.3"* ]]; then
+            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -13
+        elif [[ "$3" == "13."* ]]; then
+            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -134
+        elif [[ "$3" == "14."* ]]; then
+            "$bin"/dsc64patcher2 ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched -14
+        else
+            cp ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag ./work/MobileKeyBag.patched
+        fi
+        "$bin"/ldid -e ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag > ./work/MobileKeyBag.xml
+        "$bin"/ldid -S./work/MobileKeyBag.xml ./work/MobileKeyBag.patched 2> /dev/null
+        cp -av ./work/MobileKeyBag.patched ./rdmount/System/Library/PrivateFrameworks/MobileKeyBag.framework/MobileKeyBag
+        #"$bin"/restored_external64patcher ./rdmount/usr/local/bin/restored_external ./work/restored_external.patched -s -b
+        #"$bin"/Kernel64Patcher ./work/restored_external2.patched ./work/restored_external.patched -i
+        "$bin"/restored_external64patcher ./rdmount/usr/local/bin/restored_external ./work/restored_external.patched -s -b -f
         "$bin"/Kernel64Patcher ./work/restored_external2.patched ./work/restored_external.patched -i
         "$bin"/ldid -e ./rdmount/usr/local/bin/restored_external > ./work/restored_external.xml
         "$bin"/ldid -S./work/restored_external.xml ./work/restored_external.patched 2> /dev/null
