@@ -66,7 +66,7 @@ It should just boot to your requested iOS version normally.
 
 ## Requirements
 
-macOS Catalina or later. The script only officially supports these versions.
+macOS Mojave or later. The script only officially supports these versions.
 
 Java 8 https://builds.openlogic.com/downloadJDK/openlogic-openjdk/8u262-b10/openlogic-openjdk-8u262-b10-mac-x64.pkg
 
@@ -106,7 +106,7 @@ We back up the `activation_records` from your main OS prior to downgrading your 
    *Note: This does slightly affect battery life due to the way it works. You probably aren't using this script for battery life though, are you.
 
    ### Unsupported OS
-   The script only officially works on macOS 10.15 or later due to some limitations on the developer's end. You have to install one of those versions to use the script. Please do not ask us about this.
+   The script only officially works on macOS 10.14 or later due to some limitations on the developer's end. You have to install one of those versions to use the script. Please do not ask us about this.
 
 Linux and Windows support is not planned either, do not ask about this either.
 
