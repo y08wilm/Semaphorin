@@ -1,5 +1,6 @@
 dump.raw
 dumped.shsh
+sshtars/ssh.tar
 cctools-927.0.2.tar.gz
 libssl-dev_1.1.1f-1ubuntu2.22_amd64.deb
 libssl1.1_1.1.1f-1ubuntu2.22_amd64.deb
@@ -10,6 +11,7 @@ Darwin/.compiled
 kcache_15A5278f.raw
 kernelcache_15A5278f.dec
 iPhone_4.7_11.0_15A5278f_Restore.ipsw
+python-3.11.9-macos11.pkg
 Info.plist*
 Carrier_Bundles.tar
 data_ark.plist
