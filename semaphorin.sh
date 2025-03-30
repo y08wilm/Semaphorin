@@ -1872,8 +1872,8 @@ echo $replace
 echo $deviceid
 echo $device_os
 scid="$cpid"
+scid=$(echo $cpid | sed 's/0x/s/g')
 if [[ "$cpid" == "0x8000" || "$cpid" == "0x8001" || "$cpid" == 8003 ]]; then
-    scid=$(echo $cpid | sed 's/0x/s/g')
     echo $scid
 fi
 if [[ "$deviceid" == "iPhone10"* || "$deviceid" == "iPad6"* || "$deviceid" == "iPad7"* ]]; then
