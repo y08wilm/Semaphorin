@@ -1893,7 +1893,7 @@ if [ "$serial" = "1" ]; then
 else
     boot_args="-v"
 fi
-if [[ "$version" == "9.3"* || "$version" == "10."* ]]; then
+if [[ "$version" == "8."* || "$version" == "9.3"* || "$version" == "10."* ]]; then
     if [[ ! "$ramdisk" == 1 ]]; then
         force_activation=1
     fi
